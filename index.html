@@ -1,0 +1,1054 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>字句校对台｜小说作者自查工具</title>
+  <style>
+    :root {
+      --page: #eef0f3;
+      --paper: #fcfcfd;
+      --panel: #f6f7f9;
+      --ink: #182033;
+      --muted: #8b93a4;
+      --line: #e5e8ee;
+      --primary: #3f73f6;
+      --danger: #f04f54;
+      --punctuation: #f4b726;
+      --idiom: #4388f4;
+      --radius: 18px;
+      --shadow: 0 18px 54px rgba(42, 48, 64, .09);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--page);
+      font-family: -apple-system, "SF Pro Text", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, textarea, input { font: inherit; }
+    button { color: inherit; }
+
+    .app-shell {
+      width: min(1440px, calc(100% - 40px));
+      min-height: calc(100vh - 40px);
+      margin: 20px auto;
+      padding: 22px;
+      background: var(--paper);
+      border: 1px solid rgba(255,255,255,.9);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .topbar {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 58px;
+      padding: 0 6px 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      display: grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      color: white;
+      background: var(--primary);
+      box-shadow: 0 8px 18px rgba(63,115,246,.24);
+    }
+    .brand-mark svg { width: 18px; height: 18px; }
+    .brand-copy h1 { margin: 0; font-size: 18px; letter-spacing: .01em; }
+    .brand-copy p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 36px;
+      padding: 0 13px;
+      color: #687185;
+      background: #f1f3f6;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #20b77a; }
+    .icon-btn {
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border: 0;
+      border-radius: 11px;
+      background: transparent;
+      cursor: pointer;
+      transition: background .18s ease, transform .18s ease;
+    }
+    .icon-btn:hover { background: #f1f3f6; transform: translateY(-1px); }
+    .icon-btn svg { width: 19px; height: 19px; }
+
+    .settings-popover {
+      position: absolute;
+      z-index: 20;
+      top: 50px;
+      right: 5px;
+      width: 210px;
+      padding: 8px;
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 15px;
+      box-shadow: 0 18px 45px rgba(34,42,58,.16);
+      opacity: 0;
+      transform: translateY(-7px) scale(.98);
+      transform-origin: top right;
+      pointer-events: none;
+      transition: opacity .18s ease, transform .18s ease;
+    }
+    .settings-popover.open { opacity: 1; transform: none; pointer-events: auto; }
+    .settings-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      min-height: 40px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      font-size: 14px;
+    }
+    .settings-item:hover { background: #f4f6f9; }
+    .settings-item.danger { color: var(--danger); }
+    .settings-item svg { width: 17px; height: 17px; color: #8c94a3; }
+    .settings-divider { height: 1px; margin: 6px 4px; background: var(--line); }
+
+    .summarybar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 6px 16px;
+    }
+    .summary { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+    .summary-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: white;
+      color: #6e7687;
+      font-size: 12px;
+    }
+    .summary-chip b { color: var(--ink); font-size: 13px; }
+    .summary-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--chip); }
+    .summary-note { color: var(--muted); font-size: 12px; }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+      min-height: calc(100vh - 176px);
+    }
+
+    .pane {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: white;
+    }
+
+    .pane-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 56px;
+      padding: 0 18px;
+      background: #fafbfc;
+      border-bottom: 1px solid var(--line);
+    }
+    .pane-title { display: flex; align-items: center; gap: 9px; font-size: 14px; font-weight: 700; }
+    .pane-title span { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .pane-actions { display: flex; align-items: center; gap: 8px; }
+    .text-btn {
+      height: 32px;
+      padding: 0 11px;
+      border: 0;
+      border-radius: 9px;
+      color: #6e7788;
+      background: transparent;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    .text-btn:hover { background: #edf0f5; color: var(--ink); }
+    .primary-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 34px;
+      padding: 0 14px;
+      border: 0;
+      border-radius: 10px;
+      color: white;
+      background: var(--primary);
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 650;
+      box-shadow: 0 7px 18px rgba(63,115,246,.2);
+    }
+    .primary-btn:hover { filter: brightness(.96); }
+
+    .editor-wrap, .output-wrap { position: relative; flex: 1; min-height: 420px; }
+    #sourceText {
+      display: block;
+      width: 100%;
+      height: 100%;
+      min-height: 420px;
+      padding: 23px 25px 72px;
+      border: 0;
+      outline: 0;
+      resize: none;
+      color: #283044;
+      background: white;
+      font-family: "Songti SC", "Noto Serif SC", serif;
+      font-size: 16px;
+      line-height: 2;
+      letter-spacing: .02em;
+    }
+    #sourceText::placeholder { color: #b8beca; }
+
+    .editor-foot {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      pointer-events: none;
+    }
+    .char-count, .privacy-note { color: #9aa2b1; font-size: 11px; }
+
+    .output-wrap { overflow: hidden; }
+    #outputText {
+      position: absolute;
+      inset: 0 24px 0 0;
+      overflow-y: auto;
+      padding: 23px 30px 84px 25px;
+      scroll-behavior: smooth;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #283044;
+      font-family: "Songti SC", "Noto Serif SC", serif;
+      font-size: 16px;
+      line-height: 2;
+      letter-spacing: .02em;
+    }
+    #outputText.empty {
+      display: grid;
+      place-items: center;
+      color: #a7aeba;
+      font-family: inherit;
+      text-align: center;
+      white-space: normal;
+    }
+    .empty-state svg { width: 34px; height: 34px; margin-bottom: 12px; color: #c6ccd6; }
+    .empty-state strong { display: block; margin-bottom: 5px; color: #858e9e; font-size: 14px; }
+    .empty-state span { font-size: 12px; }
+
+    mark.issue {
+      position: relative;
+      padding: .07em .06em;
+      border-radius: 3px;
+      color: inherit;
+      background: color-mix(in srgb, var(--issue-color) 23%, transparent);
+      box-shadow: inset 0 -.18em 0 color-mix(in srgb, var(--issue-color) 55%, transparent);
+      cursor: pointer;
+      transition: background .16s ease, box-shadow .16s ease;
+    }
+    mark.issue:hover, mark.issue.active {
+      background: color-mix(in srgb, var(--issue-color) 34%, transparent);
+      box-shadow: inset 0 -.24em 0 color-mix(in srgb, var(--issue-color) 72%, transparent);
+    }
+    mark.issue.resolved { background: transparent; box-shadow: none; color: #7b8494; }
+    mark.issue.ignored { opacity: .5; background: transparent; box-shadow: inset 0 -1px 0 #b7bdc8; }
+
+    .edge-labels { position: absolute; z-index: 8; top: 0; right: 0; bottom: 0; width: 27px; pointer-events: none; }
+    .edge-tag {
+      position: absolute;
+      right: 0;
+      display: flex;
+      align-items: center;
+      width: 21px;
+      height: 30px;
+      overflow: hidden;
+      padding: 0 8px 0 7px;
+      color: white;
+      background: var(--tag-color);
+      border: 0;
+      border-radius: 7px 0 0 7px;
+      box-shadow: 0 5px 14px color-mix(in srgb, var(--tag-color) 28%, transparent);
+      cursor: pointer;
+      pointer-events: auto;
+      transition: width .22s ease, transform .16s ease, opacity .16s ease;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 650;
+    }
+    .edge-tag::after {
+      content: "";
+      position: absolute;
+      left: 5px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: white;
+      box-shadow: 0 0 0 2px rgba(255,255,255,.24);
+    }
+    .edge-tag span { margin-left: 10px; opacity: 0; transition: opacity .12s ease; }
+    .edge-tag:hover { transform: translateX(-2px); }
+    .edge-tag.open { width: 226px; height: 38px; transform: none; }
+    .edge-tag.open span { opacity: 1; }
+    .edge-tag.muted { opacity: .36; filter: grayscale(.45); }
+    .tag-actions { display: none; align-items: center; gap: 4px; margin-left: 8px; }
+    .edge-tag.open .tag-actions { display: flex; }
+    .tag-actions i {
+      padding: 5px 7px;
+      border-radius: 6px;
+      background: rgba(255,255,255,.2);
+      font-style: normal;
+      font-size: 10px;
+    }
+    .tag-actions i:hover { background: rgba(255,255,255,.34); }
+
+    .issue-card {
+      position: absolute;
+      z-index: 10;
+      right: 38px;
+      bottom: 14px;
+      left: 14px;
+      display: none;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+      padding: 14px 15px;
+      background: rgba(255,255,255,.96);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      box-shadow: 0 13px 34px rgba(38,46,63,.14);
+      backdrop-filter: blur(8px);
+    }
+    .issue-card.show { display: flex; animation: rise .18s ease both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+    .issue-card-main { min-width: 0; }
+    .issue-card-label { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 11px; font-weight: 750; }
+    .issue-card-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--card-color); }
+    .issue-card strong { display: block; margin-bottom: 3px; font-size: 13px; }
+    .issue-card p { margin: 0; color: #687184; font-size: 11px; line-height: 1.55; }
+    .issue-card-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+    .mini-btn {
+      height: 30px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      color: #596275;
+      font-size: 11px;
+    }
+    .mini-btn:hover { border-color: #c9cfda; background: #f6f8fa; }
+
+    .modal-layer {
+      position: fixed;
+      z-index: 50;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(30,35,47,.28);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .18s ease;
+    }
+    .modal-layer.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      width: min(720px, 100%);
+      max-height: min(760px, calc(100vh - 48px));
+      overflow: hidden;
+      background: white;
+      border: 1px solid rgba(255,255,255,.8);
+      border-radius: 22px;
+      box-shadow: 0 30px 80px rgba(29,35,50,.22);
+      transform: translateY(10px) scale(.985);
+      transition: transform .2s ease;
+    }
+    .modal-layer.open .modal { transform: none; }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; height: 66px; padding: 0 22px; border-bottom: 1px solid var(--line); }
+    .modal-head h2 { margin: 0; font-size: 17px; }
+    .modal-body { display: grid; grid-template-columns: 170px minmax(0,1fr); min-height: 470px; }
+    .modal-nav { padding: 15px 10px; background: #f7f8fa; border-right: 1px solid var(--line); }
+    .nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #70798b; cursor: pointer; text-align: left; font-size: 13px; }
+    .nav-btn.active { color: var(--primary); background: white; box-shadow: 0 4px 14px rgba(40,51,72,.07); font-weight: 650; }
+    .modal-content { overflow-y: auto; padding: 24px; max-height: 620px; }
+    .setting-view { display: none; }
+    .setting-view.active { display: block; }
+    .setting-view h3 { margin: 0 0 7px; font-size: 15px; }
+    .setting-view > p { margin: 0 0 20px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .input-row { display: flex; gap: 8px; }
+    .text-input { flex: 1; min-width: 0; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; outline: 0; background: white; font-size: 13px; }
+    .text-input:focus { border-color: color-mix(in srgb, var(--primary) 55%, white); box-shadow: 0 0 0 3px rgba(63,115,246,.09); }
+    .term-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .term-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 42px; padding: 8px 11px; border: 1px solid var(--line); border-radius: 10px; }
+    .term-copy { min-width: 0; }
+    .term-copy strong { display: block; font-size: 13px; }
+    .term-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .delete-btn { width: 29px; height: 29px; border: 0; border-radius: 8px; background: transparent; color: #9aa2af; cursor: pointer; }
+    .delete-btn:hover { color: var(--danger); background: #fff0f0; }
+    .field-stack { display: grid; gap: 9px; }
+    .field-label { display: grid; gap: 5px; color: #697286; font-size: 11px; }
+    .field-label .text-input { width: 100%; }
+    .batch-box {
+      width: 100%;
+      min-height: 132px;
+      padding: 11px 12px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      outline: 0;
+      resize: vertical;
+      color: var(--ink);
+      background: white;
+      font-size: 12px;
+      line-height: 1.7;
+    }
+    .batch-box:focus { border-color: color-mix(in srgb, var(--primary) 55%, white); box-shadow: 0 0 0 3px rgba(63,115,246,.09); }
+    .subsection { margin-top: 22px; padding-top: 20px; border-top: 1px solid var(--line); }
+    .subsection-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .subsection-head strong { font-size: 13px; }
+    .subsection-head span { color: var(--muted); font-size: 10px; }
+    .idiom-toolbar { display: flex; align-items: center; gap: 8px; margin: 14px 0 10px; }
+    .idiom-toolbar .text-input { height: 34px; }
+    .idiom-list { display: flex; flex-direction: column; gap: 8px; }
+    .idiom-item { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px; }
+    .idiom-item strong { display: block; margin-bottom: 4px; font-size: 13px; }
+    .idiom-item p { margin: 0; color: #70798b; font-size: 11px; line-height: 1.55; }
+    .idiom-item em { display: block; margin-top: 4px; color: #8d95a4; font-size: 10px; font-style: normal; }
+    .format-sample { margin: 10px 0 12px; padding: 10px 11px; color: #697286; background: #f5f7fa; border-radius: 9px; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: 10px; line-height: 1.7; white-space: pre-wrap; }
+    .color-grid { display: grid; gap: 11px; }
+    .color-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 11px; }
+    .color-label { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+    .color-swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--swatch); }
+    input[type="color"] { width: 32px; height: 28px; padding: 0; border: 0; border-radius: 7px; background: transparent; cursor: pointer; }
+    .data-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .data-card { padding: 16px; border: 1px solid var(--line); border-radius: 13px; }
+    .data-card strong { display: block; margin-bottom: 5px; font-size: 13px; }
+    .data-card p { min-height: 36px; margin: 0 0 13px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .wide-btn { width: 100%; height: 34px; border: 1px solid var(--line); border-radius: 9px; background: #f8f9fb; cursor: pointer; font-size: 12px; }
+    .wide-btn:hover { border-color: #cbd2de; background: white; }
+    .hint { margin-top: 14px; padding: 11px 12px; color: #747d90; background: #f5f7fa; border-radius: 10px; font-size: 11px; line-height: 1.65; }
+
+    .toast { position: fixed; z-index: 80; left: 50%; bottom: 30px; padding: 10px 15px; color: white; background: #222a39; border-radius: 10px; box-shadow: 0 10px 30px rgba(25,31,43,.24); opacity: 0; transform: translate(-50%, 8px); pointer-events: none; transition: .2s ease; font-size: 12px; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    @media (max-width: 900px) {
+      .app-shell { width: min(100% - 20px, 760px); margin: 10px auto; padding: 14px; border-radius: 20px; }
+      .workspace { grid-template-columns: 1fr; }
+      .pane { min-height: 520px; }
+      .summary-note { display: none; }
+      .status-pill { display: none; }
+    }
+    @media (max-width: 560px) {
+      .brand-copy p, .pane-title span, .privacy-note { display: none; }
+      .summarybar { align-items: flex-start; }
+      .summary { gap: 6px; }
+      .summary-chip { padding: 0 8px; }
+      .modal-body { grid-template-columns: 1fr; }
+      .modal-nav { display: flex; gap: 5px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav-btn { min-width: max-content; }
+      .data-actions { grid-template-columns: 1fr; }
+      .issue-card { flex-direction: column; }
+      .edge-tag.open { width: 195px; }
+    }
+  </style>
+</head>
+<body>
+  <template id="__bundler_thumbnail" data-bg-color="#eef0f3">
+    <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+      <rect width="1200" height="800" fill="#eef0f3" />
+      <rect x="120" y="90" width="960" height="620" rx="36" fill="#fcfcfd" />
+      <rect x="180" y="210" width="390" height="400" rx="22" fill="#ffffff" stroke="#e5e8ee" />
+      <rect x="630" y="210" width="390" height="400" rx="22" fill="#ffffff" stroke="#e5e8ee" />
+      <rect x="1000" y="300" width="34" height="60" rx="8" fill="#f04f54" />
+      <rect x="1000" y="390" width="34" height="60" rx="8" fill="#f4b726" />
+      <rect x="1000" y="480" width="34" height="60" rx="8" fill="#4388f4" />
+    </svg>
+  </template>
+
+  <main class="app-shell" data-screen-label="小说校对台主界面">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 4.5h14v12H9l-4 3v-15Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 9h6M9 12.5h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
+        <div class="brand-copy">
+          <h1>字句校对台</h1>
+          <p>给小说作者的本地文本自查工具</p>
+        </div>
+      </div>
+      <div class="top-actions">
+        <div class="status-pill"><span class="status-dot"></span><span>数据仅保存在本机</span></div>
+        <button class="icon-btn" id="settingsBtn" type="button" aria-label="打开设置" title="设置">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.8"/><path d="M19 13.8a7.8 7.8 0 0 0 .05-3.4l2-1.5-2-3.4-2.45 1a8 8 0 0 0-2.95-1.7L13.3 2h-4l-.4 2.8A8.3 8.3 0 0 0 6 6.5l-2.5-1-2 3.4 2.1 1.5a7.8 7.8 0 0 0 0 3.4l-2.1 1.5 2 3.4 2.5-1a8.3 8.3 0 0 0 2.9 1.7l.4 2.6h4l.35-2.6a8 8 0 0 0 2.95-1.7l2.45 1 2-3.4-2-1.5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="settings-popover" id="settingsPopover" aria-hidden="true">
+        <button class="settings-item" data-open-settings="terms" type="button"><span>词组管理</span></button>
+        <button class="settings-item" data-open-settings="idioms" type="button"><span>成语词库</span></button>
+        <button class="settings-item" data-open-settings="colors" type="button"><span>修改标签颜色</span></button>
+        <div class="settings-divider"></div>
+        <button class="settings-item" id="quickExport" type="button"><span>导出数据包</span></button>
+        <button class="settings-item" id="quickImport" type="button"><span>导入数据包</span></button>
+        <div class="settings-divider"></div>
+        <button class="settings-item danger" id="resetAll" type="button"><span>重置所有数据</span></button>
+      </div>
+    </header>
+
+    <section class="summarybar" aria-label="检查摘要">
+      <div class="summary">
+        <div class="summary-chip" style="--chip: var(--danger)"><span class="summary-dot"></span>敏感词 <b id="countSensitive">0</b></div>
+        <div class="summary-chip" style="--chip: var(--punctuation)"><span class="summary-dot"></span>错误标点 <b id="countPunctuation">0</b></div>
+        <div class="summary-chip" style="--chip: var(--idiom)"><span class="summary-dot"></span>易错成语 <b id="countIdiom">0</b></div>
+      </div>
+      <div class="summary-note">点击右侧边签可定位并处理问题</div>
+    </section>
+
+    <section class="workspace">
+      <article class="pane">
+        <div class="pane-head">
+          <div class="pane-title">原文 <span>粘贴或输入小说片段</span></div>
+          <div class="pane-actions"><button class="text-btn" id="loadDemo" type="button">载入示例</button><button class="text-btn" id="clearText" type="button">清空</button></div>
+        </div>
+        <div class="editor-wrap">
+          <textarea id="sourceText" spellcheck="false" placeholder="在这里粘贴原文……&#10;&#10;系统会检查自定义词组、重复或混用的标点，以及容易望文生义的成语。"></textarea>
+          <div class="editor-foot"><span class="char-count" id="charCount">0 字</span><span class="privacy-note">自动保存 · 不会上传</span></div>
+        </div>
+      </article>
+
+      <article class="pane">
+        <div class="pane-head">
+          <div class="pane-title">筛查结果 <span id="resultState">等待输入</span></div>
+          <div class="pane-actions"><button class="text-btn" id="copyResult" type="button">复制文本</button><button class="primary-btn" id="analyzeBtn" type="button">开始筛查</button></div>
+        </div>
+        <div class="output-wrap" id="outputWrap">
+          <div id="outputText" class="empty"><div class="empty-state"><svg viewBox="0 0 24 24" fill="none"><path d="M7 3.5h10a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><strong>筛查结果会显示在这里</strong><span>检测到的问题将用不同颜色标记</span></div></div>
+          <div class="edge-labels" id="edgeLabels"></div>
+          <div class="issue-card" id="issueCard"></div>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <div class="modal-layer" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <div class="modal">
+      <div class="modal-head"><h2 id="settingsTitle">设置</h2><button class="icon-btn" id="closeSettings" type="button" aria-label="关闭设置">×</button></div>
+      <div class="modal-body">
+        <nav class="modal-nav">
+          <button class="nav-btn active" data-view="terms" type="button">词组管理</button>
+          <button class="nav-btn" data-view="idioms" type="button">成语词库</button>
+          <button class="nav-btn" data-view="colors" type="button">标签颜色</button>
+          <button class="nav-btn" data-view="data" type="button">数据包</button>
+        </nav>
+        <div class="modal-content">
+          <section class="setting-view active" data-setting-view="terms">
+            <h3>自查词组</h3><p>系统预置词组和你添加的词组都会参与红色标记。预置内容也可以自由删除。</p>
+            <div class="input-row"><input class="text-input" id="newTerm" type="text" maxlength="30" placeholder="输入一个要关注的词组"/><button class="primary-btn" id="addTerm" type="button">添加词组</button></div>
+            <div class="term-list" id="termList"></div>
+          </section>
+          <section class="setting-view" data-setting-view="idioms">
+            <h3>易错成语词库</h3><p>查阅或补充需要提醒的成语。正文出现后会用蓝色标记，并显示释义和正确用法。</p>
+            <div class="field-stack">
+              <label class="field-label">成语<input class="text-input" id="newIdiomTerm" type="text" maxlength="20" placeholder="例如：差强人意" /></label>
+              <label class="field-label">释义<input class="text-input" id="newIdiomMeaning" type="text" maxlength="160" placeholder="说明准确含义或常见误用" /></label>
+              <label class="field-label">举例<input class="text-input" id="newIdiomExample" type="text" maxlength="180" placeholder="例如：这次改稿整体还算差强人意。" /></label>
+              <button class="primary-btn" id="addIdiom" type="button">添加成语</button>
+            </div>
+            <div class="subsection">
+              <div class="subsection-head"><strong>批量导入</strong><span>自动识别三种分隔方式</span></div>
+              <div class="format-sample">差强人意 | 大体上还能使人满意 | 这次改稿整体还算差强人意。
+或使用制表符分隔
+或使用：成语：…　释义：…　举例：…</div>
+              <textarea class="batch-box" id="idiomBatch" placeholder="每条成语包含：成语、释义、举例。多条内容请换行或用空行分隔。"></textarea>
+              <button class="wide-btn" id="importIdioms" type="button">识别并导入</button>
+            </div>
+            <div class="idiom-toolbar"><input class="text-input" id="idiomSearch" type="search" placeholder="搜索成语或释义" /><span class="summary-chip"><b id="idiomTotal">0</b> 条</span></div>
+            <div class="idiom-list" id="idiomList"></div>
+          </section>
+          <section class="setting-view" data-setting-view="colors">
+            <h3>边签与标记颜色</h3><p>修改后立即生效，并保存在当前浏览器。建议三类问题保持足够的颜色差异。</p>
+            <div class="color-grid">
+              <label class="color-row"><span class="color-label"><span class="color-swatch" style="--swatch: var(--danger)"></span>敏感词</span><input type="color" data-color="danger" value="#f04f54" /></label>
+              <label class="color-row"><span class="color-label"><span class="color-swatch" style="--swatch: var(--punctuation)"></span>错误标点</span><input type="color" data-color="punctuation" value="#f4b726" /></label>
+              <label class="color-row"><span class="color-label"><span class="color-swatch" style="--swatch: var(--idiom)"></span>易错成语</span><input type="color" data-color="idiom" value="#4388f4" /></label>
+            </div>
+          </section>
+          <section class="setting-view" data-setting-view="data">
+            <h3>导入与导出</h3><p>数据包为 JSON 文件，包含词组、成语词库和标签颜色，不包含你的小说原文。</p>
+            <div class="data-actions">
+              <div class="data-card"><strong>导出数据包</strong><p>备份当前词组和颜色设置，方便换设备继续使用。</p><button class="wide-btn" id="exportData" type="button">下载 JSON</button></div>
+              <div class="data-card"><strong>导入数据包</strong><p>读取之前导出的 JSON 文件，并覆盖当前设置。</p><button class="wide-btn" id="importData" type="button">选择文件</button></div>
+            </div>
+            <div class="hint">兼容格式：<code>{ "terms": ["词组"], "idioms": [{ "term": "成语", "meaning": "释义", "example": "举例" }], "colors": { ... } }</code>。</div>
+          </section>
+        </div>
+      </div>
+    </div>
+  </div>
+  <input id="fileInput" type="file" accept="application/json,.json" hidden />
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "novel-proofreader-v1";
+      const DEFAULT_TERMS = [
+        { text: "非常非常", source: "系统预置" },
+        { text: "然后然后", source: "系统预置" },
+        { text: "不禁哑然失笑", source: "系统预置" }
+      ];
+      const DEFAULT_IDIOMS = [
+        { term: "差强人意", meaning: "大体上还能使人满意，并不是“很不满意”。", example: "这次改稿虽有瑕疵，整体表现还算差强人意。", source: "系统预置" },
+        { term: "首当其冲", meaning: "最先受到攻击或遭遇灾难，不是“第一个去做”。", example: "暴雨来临时，沿江低洼地区首当其冲。", source: "系统预置" },
+        { term: "不刊之论", meaning: "正确得不能修改的言论，不是“不能刊登的言论”。", example: "他的这番分析堪称不刊之论。", source: "系统预置" },
+        { term: "明日黄花", meaning: "比喻过时或失去意义的事物，不能说“昨日黄花”。", example: "曾经流行的玩法如今已是明日黄花。", source: "系统预置" },
+        { term: "炙手可热", meaning: "气焰很盛、权势很大，常含贬义，不只是“热门”。", example: "那位权臣一时炙手可热，无人敢忤逆。", source: "系统预置" },
+        { term: "万人空巷", meaning: "人们都从巷里出来，形容庆祝、欢迎等盛况，不是街上没人。", example: "夺冠队伍归来时，城中万人空巷。", source: "系统预置" },
+        { term: "荼毒", meaning: "荼是一种苦菜；荼毒比喻毒害、残害。", example: "战争多年，百姓深受荼毒。", source: "系统预置" }
+      ];
+      const MISTYPED_IDIOMS = [
+        { wrong: "茶毒", correct: "荼毒", meaning: "“荼”指苦菜，引申为毒害；这里不能写成茶叶的“茶”。", example: "正确：战争多年，百姓深受荼毒。" },
+        { wrong: "按步就班", correct: "按部就班", meaning: "“部”指门类、次序，应写作“按部就班”。", example: "正确：工作需要按部就班地推进。" },
+        { wrong: "再接再励", correct: "再接再厉", meaning: "“厉”有磨砺、奋勉之意，应写作“再接再厉”。", example: "正确：希望大家再接再厉，完成最后一轮修改。" },
+        { wrong: "一诺千斤", correct: "一诺千金", meaning: "承诺价值千金，应写作“一诺千金”。", example: "正确：他向来一诺千金，从不食言。" },
+        { wrong: "迫不急待", correct: "迫不及待", meaning: "急迫得来不及等待，应写作“迫不及待”。", example: "正确：她迫不及待地拆开了信封。" },
+        { wrong: "金壁辉煌", correct: "金碧辉煌", meaning: "“碧”指翠绿色，应写作“金碧辉煌”。", example: "正确：殿内装饰得金碧辉煌。" },
+        { wrong: "走头无路", correct: "走投无路", meaning: "“投”指投奔，应写作“走投无路”。", example: "正确：他被逼得走投无路。" },
+        { wrong: "谈笑风声", correct: "谈笑风生", meaning: "“风生”形容谈话活跃，应写作“谈笑风生”。", example: "正确：席间众人谈笑风生。" },
+        { wrong: "默守成规", correct: "墨守成规", meaning: "典故与墨子守城有关，应写作“墨守成规”。", example: "正确：写作可以借鉴规则，但不必墨守成规。" },
+        { wrong: "名符其实", correct: "名副其实", meaning: "“副”表示符合，应写作“名副其实”。", example: "正确：这部作品称得上名副其实的佳作。" },
+        { wrong: "穿流不息", correct: "川流不息", meaning: "像河川一样连续不断，应写作“川流不息”。", example: "正确：街上的车辆川流不息。" }
+      ];
+      const DEFAULT_COLORS = { danger: "#f04f54", punctuation: "#f4b726", idiom: "#4388f4" };
+      const DEMO = "雨声非常非常大，沈砚推开窗户，说道：\“你真的决定了？？\”\n\n这份答卷只能算差强人意，他却误以为这是极差的评价。街上万人空巷，空得连一只猫都没有！！多年战乱茶毒百姓，随后他首当其冲地报名参加了比赛。";
+
+      const els = {
+        source: document.getElementById("sourceText"), output: document.getElementById("outputText"), outputWrap: document.getElementById("outputWrap"),
+        labels: document.getElementById("edgeLabels"), issueCard: document.getElementById("issueCard"), charCount: document.getElementById("charCount"),
+        resultState: document.getElementById("resultState"), settingsBtn: document.getElementById("settingsBtn"), popover: document.getElementById("settingsPopover"),
+        modal: document.getElementById("settingsModal"), termList: document.getElementById("termList"), newTerm: document.getElementById("newTerm"),
+        idiomList: document.getElementById("idiomList"), idiomSearch: document.getElementById("idiomSearch"), idiomBatch: document.getElementById("idiomBatch"),
+        fileInput: document.getElementById("fileInput"), toast: document.getElementById("toast")
+      };
+
+      let state = loadState();
+      let issues = [];
+      let activeIssueId = null;
+      let toastTimer = null;
+      let inputTimer = null;
+
+      function loadState() {
+        try {
+          const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+          return {
+            terms: Array.isArray(saved?.terms) ? saved.terms : DEFAULT_TERMS,
+            idioms: Array.isArray(saved?.idioms) ? saved.idioms : DEFAULT_IDIOMS.map(item => ({ ...item })),
+            colors: { ...DEFAULT_COLORS, ...(saved?.colors || {}) },
+            source: typeof saved?.source === "string" ? saved.source : "",
+            issueStatus: saved?.issueStatus && typeof saved.issueStatus === "object" ? saved.issueStatus : {}
+          };
+        } catch (_) { return { terms: DEFAULT_TERMS, idioms: DEFAULT_IDIOMS.map(item => ({ ...item })), colors: DEFAULT_COLORS, source: "", issueStatus: {} }; }
+      }
+
+      function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      function escapeHtml(value) { return value.replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch])); }
+      function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+      function applyColors() {
+        const root = document.documentElement;
+        root.style.setProperty("--danger", state.colors.danger);
+        root.style.setProperty("--punctuation", state.colors.punctuation);
+        root.style.setProperty("--idiom", state.colors.idiom);
+        document.querySelectorAll("input[data-color]").forEach(input => input.value = state.colors[input.dataset.color]);
+      }
+
+      function findIssues(text) {
+        const found = [];
+        const add = (start, end, type, title, detail, example = "") => {
+          if (start < 0 || end <= start) return;
+          const id = `${type}-${start}-${end}-${text.slice(start, end)}`;
+          found.push({ id, start, end, type, title, detail, example, status: state.issueStatus[id] || "open" });
+        };
+
+        state.terms.forEach(item => {
+          const term = typeof item === "string" ? item : item.text;
+          if (!term) return;
+          const re = new RegExp(escapeRegExp(term), "g");
+          let match;
+          while ((match = re.exec(text))) add(match.index, match.index + term.length, "sensitive", `关注词组：${term}`, "这是词库中需要作者复核的词组。请结合上下文判断是否删改。", "");
+        });
+
+        const punctuationRules = [
+          { re: /([！？?!。；;，,、…])\1+/g, title: "重复标点", detail: "连续使用相同标点。小说语气需要加强时可以保留，但建议统一风格。" },
+          { re: /[，,][。！？?!]/g, title: "标点混用", detail: "逗号后紧跟句末标点，通常应保留其中一个。" },
+          { re: /[。！？?!][，,]/g, title: "标点次序异常", detail: "句末标点后又出现逗号，建议检查断句。" },
+          { re: /[\u4e00-\u9fff],[\u4e00-\u9fff]/g, title: "中文语境使用半角逗号", detail: "中文正文通常使用全角逗号“，”。" }
+        ];
+        punctuationRules.forEach(rule => {
+          let match;
+          while ((match = rule.re.exec(text))) add(match.index, match.index + match[0].length, "punctuation", rule.title, rule.detail, "");
+        });
+
+        state.idioms.forEach(item => {
+          const re = new RegExp(escapeRegExp(item.term), "g");
+          let match;
+          while ((match = re.exec(text))) add(match.index, match.index + item.term.length, "idiom", `易错成语：${item.term}`, item.meaning, item.example ? `例：${item.example.replace(/^例[：:]?/, "")}` : "");
+        });
+
+        MISTYPED_IDIOMS.forEach(item => {
+          const re = new RegExp(escapeRegExp(item.wrong), "g");
+          let match;
+          while ((match = re.exec(text))) add(match.index, match.index + item.wrong.length, "idiom", `疑似错写：${item.wrong} → ${item.correct}`, item.meaning, item.example);
+        });
+
+        found.sort((a,b) => a.start - b.start || priority(a.type) - priority(b.type));
+        const accepted = [];
+        found.forEach(item => {
+          const overlap = accepted.some(existing => item.start < existing.end && item.end > existing.start);
+          if (!overlap) accepted.push(item);
+        });
+        return accepted;
+      }
+
+      function priority(type) { return ({ sensitive: 1, punctuation: 2, idiom: 3 })[type] || 9; }
+      function typeMeta(type) {
+        return {
+          sensitive: { label: "敏感词", color: state.colors.danger },
+          punctuation: { label: "错误标点", color: state.colors.punctuation },
+          idiom: { label: "易错成语", color: state.colors.idiom }
+        }[type];
+      }
+
+      function analyze() {
+        const text = els.source.value;
+        state.source = text;
+        saveState();
+        els.charCount.textContent = `${text.replace(/\s/g, "").length} 字`;
+        activeIssueId = null;
+        els.issueCard.classList.remove("show");
+        if (!text.trim()) {
+          issues = [];
+          els.output.className = "empty";
+          els.output.innerHTML = '<div class="empty-state"><strong>筛查结果会显示在这里</strong><span>检测到的问题将用不同颜色标记</span></div>';
+          els.labels.innerHTML = "";
+          els.resultState.textContent = "等待输入";
+          updateCounts();
+          return;
+        }
+        issues = findIssues(text);
+        renderOutput(text);
+        renderLabels(text);
+        updateCounts();
+        const unresolved = issues.filter(i => i.status === "open").length;
+        els.resultState.textContent = unresolved ? `发现 ${unresolved} 处待复核` : "未发现待处理问题";
+      }
+
+      function renderOutput(text) {
+        els.output.className = "";
+        let cursor = 0;
+        let html = "";
+        issues.forEach(issue => {
+          html += escapeHtml(text.slice(cursor, issue.start));
+          const meta = typeMeta(issue.type);
+          html += `<mark class="issue ${issue.status === "modified" ? "resolved" : issue.status === "ignored" ? "ignored" : ""}" style="--issue-color:${meta.color}" data-issue-id="${escapeHtml(issue.id)}">${escapeHtml(text.slice(issue.start, issue.end))}</mark>`;
+          cursor = issue.end;
+        });
+        html += escapeHtml(text.slice(cursor));
+        els.output.innerHTML = html;
+      }
+
+      function renderLabels(text) {
+        els.labels.innerHTML = "";
+        const maxTop = Math.max(12, els.outputWrap.clientHeight - 52);
+        const occupied = [];
+        issues.forEach(issue => {
+          const meta = typeMeta(issue.type);
+          let top = Math.max(10, Math.round((issue.start / Math.max(text.length, 1)) * maxTop));
+          while (occupied.some(y => Math.abs(y - top) < 32)) top += 32;
+          top = Math.min(top, maxTop);
+          occupied.push(top);
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = `edge-tag ${issue.status !== "open" ? "muted" : ""}`;
+          button.dataset.issueId = issue.id;
+          button.style.cssText = `--tag-color:${meta.color};top:${top}px`;
+          button.title = `${meta.label}：${issue.title}`;
+          button.innerHTML = `<span>${meta.label}</span><span class="tag-actions"><i data-status="modified">已修改</i><i data-status="ignored">忽略</i><i data-status="kept">保留</i></span>`;
+          els.labels.appendChild(button);
+        });
+      }
+
+      function updateCounts() {
+        const count = type => issues.filter(i => i.type === type && i.status === "open").length;
+        document.getElementById("countSensitive").textContent = count("sensitive");
+        document.getElementById("countPunctuation").textContent = count("punctuation");
+        document.getElementById("countIdiom").textContent = count("idiom");
+      }
+
+      function selectIssue(id) {
+        const issue = issues.find(item => item.id === id);
+        if (!issue) return;
+        activeIssueId = id;
+        document.querySelectorAll(".edge-tag").forEach(tag => tag.classList.toggle("open", tag.dataset.issueId === id));
+        document.querySelectorAll("mark.issue").forEach(mark => mark.classList.toggle("active", mark.dataset.issueId === id));
+        const mark = els.output.querySelector(`[data-issue-id="${CSS.escape(id)}"]`);
+        mark?.scrollIntoView({ behavior: "smooth", block: "center" });
+        const meta = typeMeta(issue.type);
+        els.issueCard.style.setProperty("--card-color", meta.color);
+        els.issueCard.innerHTML = `<div class="issue-card-main"><div class="issue-card-label">${meta.label}</div><strong>${escapeHtml(issue.title)}</strong><p>${escapeHtml(issue.detail)}${issue.example ? `<br>${escapeHtml(issue.example)}` : ""}</p></div><div class="issue-card-actions"><button class="mini-btn" data-card-status="modified">已修改</button><button class="mini-btn" data-card-status="ignored">忽略</button><button class="mini-btn" data-card-status="kept">保留</button></div>`;
+        els.issueCard.classList.add("show");
+      }
+
+      function setIssueStatus(id, status) {
+        const issue = issues.find(item => item.id === id);
+        if (!issue) return;
+        issue.status = status === "kept" ? "open" : status;
+        state.issueStatus[id] = issue.status;
+        saveState();
+        renderOutput(els.source.value);
+        renderLabels(els.source.value);
+        updateCounts();
+        els.issueCard.classList.remove("show");
+        activeIssueId = null;
+        showToast(status === "modified" ? "已标记为修改" : status === "ignored" ? "已忽略这一处" : "已保留并继续提示");
+      }
+
+      function renderTerms() {
+        els.termList.innerHTML = "";
+        if (!state.terms.length) els.termList.innerHTML = '<div class="hint">词库为空。添加词组后会在原文中以红色标记。</div>';
+        state.terms.forEach((item, index) => {
+          const term = typeof item === "string" ? { text: item, source: "用户添加" } : item;
+          const row = document.createElement("div");
+          row.className = "term-item";
+          row.innerHTML = `<div class="term-copy"><strong>${escapeHtml(term.text)}</strong><span>${escapeHtml(term.source || "用户添加")}</span></div><button class="delete-btn" data-delete-term="${index}" type="button" title="删除">×</button>`;
+          els.termList.appendChild(row);
+        });
+      }
+
+      function cleanIdiom(item, source = "用户添加") {
+        const term = String(item?.term || "").trim().slice(0, 20);
+        const meaning = String(item?.meaning || "").trim().slice(0, 160);
+        const example = String(item?.example || "").trim().replace(/^例[：:]?\s*/, "").slice(0, 180);
+        if (!term || !meaning || !example) return null;
+        return { term, meaning, example, source: String(item?.source || source).slice(0, 20) };
+      }
+
+      function parseIdiomBatch(raw) {
+        const text = raw.replace(/\r/g, "").trim();
+        if (!text) return [];
+        const parsed = [];
+        text.split(/\n\s*\n|(?=\n\s*成语\s*[：:])/).map(block => block.trim()).filter(Boolean).forEach(block => {
+          const labeledMatch = block.match(/成语\s*[：:]\s*([\s\S]*?)\s*释义\s*[：:]\s*([\s\S]*?)\s*举例\s*[：:]\s*([\s\S]*)$/);
+          if (!labeledMatch) return;
+          const item = cleanIdiom({ term: labeledMatch[1], meaning: labeledMatch[2], example: labeledMatch[3] }, "批量导入");
+          if (item) parsed.push(item);
+        });
+        if (parsed.length) return parsed;
+
+        text.split("\n").map(line => line.trim()).filter(Boolean).forEach(line => {
+          let parts = line.includes("\t") ? line.split("\t") : line.split(/\s*[|｜]\s*/);
+          if (parts.length < 3) parts = line.split(/\s{2,}/);
+          if (parts.length >= 3) {
+            const item = cleanIdiom({ term: parts[0], meaning: parts[1], example: parts.slice(2).join("；") }, "批量导入");
+            if (item) parsed.push(item);
+          }
+        });
+        return parsed;
+      }
+
+      function renderIdioms() {
+        const keyword = (els.idiomSearch?.value || "").trim().toLowerCase();
+        const visible = state.idioms.map((item, index) => ({ item, index })).filter(({ item }) => !keyword || `${item.term}${item.meaning}${item.example}`.toLowerCase().includes(keyword));
+        document.getElementById("idiomTotal").textContent = state.idioms.length;
+        els.idiomList.innerHTML = "";
+        if (!visible.length) {
+          els.idiomList.innerHTML = `<div class="hint">${state.idioms.length ? "没有符合搜索条件的成语。" : "成语词库为空，可在上方添加或批量导入。"}</div>`;
+          return;
+        }
+        visible.forEach(({ item, index }) => {
+          const row = document.createElement("div");
+          row.className = "idiom-item";
+          row.innerHTML = `<div><strong>${escapeHtml(item.term)}</strong><p>${escapeHtml(item.meaning)}</p><em>例：${escapeHtml(item.example.replace(/^例[：:]?\s*/, ""))} · ${escapeHtml(item.source || "用户添加")}</em></div><button class="delete-btn" data-delete-idiom="${index}" type="button" title="删除">×</button>`;
+          els.idiomList.appendChild(row);
+        });
+      }
+
+      function openSettings(view = "terms") {
+        els.popover.classList.remove("open");
+        els.modal.classList.add("open");
+        document.querySelectorAll(".nav-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.view === view));
+        document.querySelectorAll(".setting-view").forEach(panel => panel.classList.toggle("active", panel.dataset.settingView === view));
+        renderTerms();
+        renderIdioms();
+      }
+      function closeSettings() { els.modal.classList.remove("open"); }
+
+      function exportData() {
+        const payload = { app: "字句校对台", version: 2, exportedAt: new Date().toISOString(), terms: state.terms, idioms: state.idioms, colors: state.colors };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `字句校对台-数据包-${new Date().toISOString().slice(0,10)}.json`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast("数据包已导出");
+      }
+
+      function importFile(file) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const data = JSON.parse(reader.result);
+            if (!Array.isArray(data.terms)) throw new Error("词组格式不正确");
+            const cleanTerms = data.terms.map(item => typeof item === "string" ? { text: item.slice(0,30), source: "导入数据" } : { text: String(item.text || "").slice(0,30), source: String(item.source || "导入数据") }).filter(item => item.text);
+            const cleanIdioms = Array.isArray(data.idioms) ? data.idioms.map(item => cleanIdiom(item, "数据包导入")).filter(Boolean) : state.idioms;
+            const cleanColors = { ...state.colors };
+            Object.keys(DEFAULT_COLORS).forEach(key => { if (/^#[0-9a-f]{6}$/i.test(data.colors?.[key])) cleanColors[key] = data.colors[key]; });
+            state.terms = cleanTerms;
+            state.idioms = cleanIdioms;
+            state.colors = cleanColors;
+            saveState(); applyColors(); renderTerms(); renderIdioms(); analyze();
+            showToast(`已导入 ${cleanTerms.length} 个词组和 ${cleanIdioms.length} 条成语`);
+          } catch (error) { showToast(`导入失败：${error.message}`); }
+          els.fileInput.value = "";
+        };
+        reader.readAsText(file, "utf-8");
+      }
+
+      function showToast(message) {
+        clearTimeout(toastTimer);
+        els.toast.textContent = message;
+        els.toast.classList.add("show");
+        toastTimer = setTimeout(() => els.toast.classList.remove("show"), 1800);
+      }
+
+      els.settingsBtn.addEventListener("click", e => { e.stopPropagation(); els.popover.classList.toggle("open"); });
+      document.addEventListener("click", e => { if (!els.popover.contains(e.target) && e.target !== els.settingsBtn) els.popover.classList.remove("open"); });
+      document.querySelectorAll("[data-open-settings]").forEach(btn => btn.addEventListener("click", () => openSettings(btn.dataset.openSettings)));
+      document.getElementById("closeSettings").addEventListener("click", closeSettings);
+      els.modal.addEventListener("click", e => { if (e.target === els.modal) closeSettings(); });
+      document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => openSettings(btn.dataset.view)));
+      document.addEventListener("keydown", e => { if (e.key === "Escape") { closeSettings(); els.popover.classList.remove("open"); } });
+
+      els.source.addEventListener("input", () => {
+        els.charCount.textContent = `${els.source.value.replace(/\s/g, "").length} 字`;
+        state.source = els.source.value; saveState();
+        clearTimeout(inputTimer); inputTimer = setTimeout(analyze, 450);
+      });
+      document.getElementById("analyzeBtn").addEventListener("click", () => { analyze(); showToast("筛查完成"); });
+      document.getElementById("loadDemo").addEventListener("click", () => { els.source.value = DEMO; analyze(); showToast("已载入示例文本"); });
+      document.getElementById("clearText").addEventListener("click", () => { els.source.value = ""; state.source = ""; state.issueStatus = {}; saveState(); analyze(); els.source.focus(); });
+      document.getElementById("copyResult").addEventListener("click", async () => {
+        if (!els.source.value) return showToast("暂无可复制内容");
+        try { await navigator.clipboard.writeText(els.source.value); showToast("原文已复制"); }
+        catch (_) { els.source.select(); document.execCommand("copy"); showToast("原文已复制"); }
+      });
+
+      els.output.addEventListener("click", e => { const mark = e.target.closest("mark.issue"); if (mark) selectIssue(mark.dataset.issueId); });
+      els.labels.addEventListener("click", e => {
+        const tag = e.target.closest(".edge-tag"); if (!tag) return;
+        const status = e.target.closest("[data-status]")?.dataset.status;
+        if (status) { e.stopPropagation(); setIssueStatus(tag.dataset.issueId, status); }
+        else selectIssue(tag.dataset.issueId);
+      });
+      els.issueCard.addEventListener("click", e => { const status = e.target.closest("[data-card-status]")?.dataset.cardStatus; if (status && activeIssueId) setIssueStatus(activeIssueId, status); });
+
+      document.getElementById("addTerm").addEventListener("click", () => {
+        const text = els.newTerm.value.trim();
+        if (!text) return showToast("请输入词组");
+        if (state.terms.some(item => (typeof item === "string" ? item : item.text) === text)) return showToast("词组已存在");
+        state.terms.unshift({ text, source: "用户添加" }); els.newTerm.value = ""; saveState(); renderTerms(); analyze(); showToast("词组已添加");
+      });
+      els.newTerm.addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("addTerm").click(); });
+      els.termList.addEventListener("click", e => { const btn = e.target.closest("[data-delete-term]"); if (!btn) return; state.terms.splice(Number(btn.dataset.deleteTerm), 1); saveState(); renderTerms(); analyze(); });
+      document.getElementById("addIdiom").addEventListener("click", () => {
+        const item = cleanIdiom({
+          term: document.getElementById("newIdiomTerm").value,
+          meaning: document.getElementById("newIdiomMeaning").value,
+          example: document.getElementById("newIdiomExample").value
+        });
+        if (!item) return showToast("请完整填写成语、释义和举例");
+        const existingIndex = state.idioms.findIndex(entry => entry.term === item.term);
+        if (existingIndex >= 0) state.idioms.splice(existingIndex, 1, item); else state.idioms.unshift(item);
+        ["newIdiomTerm", "newIdiomMeaning", "newIdiomExample"].forEach(id => document.getElementById(id).value = "");
+        saveState(); renderIdioms(); analyze(); showToast(existingIndex >= 0 ? "已更新成语词条" : "成语已添加");
+      });
+      document.getElementById("importIdioms").addEventListener("click", () => {
+        const imported = parseIdiomBatch(els.idiomBatch.value);
+        if (!imported.length) return showToast("未识别到完整词条，请检查三个字段");
+        let added = 0; let updated = 0;
+        imported.forEach(item => {
+          const index = state.idioms.findIndex(entry => entry.term === item.term);
+          if (index >= 0) { state.idioms.splice(index, 1, item); updated += 1; }
+          else { state.idioms.push(item); added += 1; }
+        });
+        els.idiomBatch.value = "";
+        saveState(); renderIdioms(); analyze(); showToast(`已导入 ${added} 条，更新 ${updated} 条`);
+      });
+      els.idiomSearch.addEventListener("input", renderIdioms);
+      els.idiomList.addEventListener("click", e => {
+        const btn = e.target.closest("[data-delete-idiom]"); if (!btn) return;
+        state.idioms.splice(Number(btn.dataset.deleteIdiom), 1); saveState(); renderIdioms(); analyze(); showToast("成语词条已删除");
+      });
+      document.querySelectorAll("input[data-color]").forEach(input => input.addEventListener("input", () => { state.colors[input.dataset.color] = input.value; saveState(); applyColors(); analyze(); }));
+
+      document.getElementById("exportData").addEventListener("click", exportData);
+      document.getElementById("quickExport").addEventListener("click", exportData);
+      document.getElementById("importData").addEventListener("click", () => els.fileInput.click());
+      document.getElementById("quickImport").addEventListener("click", () => els.fileInput.click());
+      els.fileInput.addEventListener("change", () => { if (els.fileInput.files[0]) importFile(els.fileInput.files[0]); });
+      document.getElementById("resetAll").addEventListener("click", () => {
+        if (!confirm("确定重置词组、颜色和原文吗？此操作无法撤销。")) return;
+        state = { terms: DEFAULT_TERMS.map(item => ({...item})), idioms: DEFAULT_IDIOMS.map(item => ({...item})), colors: {...DEFAULT_COLORS}, source: "", issueStatus: {} };
+        saveState(); applyColors(); els.source.value = ""; analyze(); renderTerms(); renderIdioms(); showToast("已恢复默认设置");
+      });
+
+      window.addEventListener("resize", () => { if (issues.length) renderLabels(els.source.value); });
+
+      applyColors();
+      els.source.value = state.source;
+      analyze();
+    })();
+  </script>
+</body>
+</html>
