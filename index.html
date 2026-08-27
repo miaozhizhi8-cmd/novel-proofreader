@@ -665,12 +665,13 @@
   <div class="toast" id="toast" role="status"></div>
 
   <script src="./完整成语词库.js"></script>
+  <script src="./补充词库.js"></script>
   <script>
     (() => {
       "use strict";
 
       const STORAGE_KEY = "novel-proofreader-v1";
-      const DATABASE_VERSION = 7;
+      const DATABASE_VERSION = 9;
       const RETIRED_DEFAULT_TERMS = new Set(["非常非常","然后然后","不禁哑然失笑"]);
       const DEFAULT_TERMS = [
         "八九",
@@ -751,6 +752,14 @@
         {id:"ascii-square-bracket",title:"中文内容使用半角方括号",pattern:"\\[[^\\]\\n]*[\\u3400-\\u9fff][^\\]\\n]*\\]",detail:"括住中文说明时通常使用全角方括号或六角括号；代码、引用标记等特殊用途可忽略。",enabled:true},
         {id:"space-before-close-bracket",title:"右括号前出现多余空格",pattern:"[ \\t　]+[）】〕］｝]",detail:"右括号前通常不留半角或全角空格。",enabled:true}
       ].map(x=>({...x,source:"系统预置·规范补充"})));
+      const SUPPLEMENT = window.NOVEL_PROOFREADER_SUPPLEMENT || {};
+      function appendUniqueDefaults(target, additions, key){
+        const seen=new Set(target.map(item=>item?.[key]).filter(Boolean));
+        additions.forEach(item=>{const value=item?.[key];if(value&&!seen.has(value)){target.push(item);seen.add(value)}});
+      }
+      appendUniqueDefaults(DEFAULT_IDIOMS,(Array.isArray(SUPPLEMENT.idioms)?SUPPLEMENT.idioms:[]).map(([term,meaning,example])=>({term,meaning,example,source:"系统预置·常见与易混"})),"term");
+      appendUniqueDefaults(DEFAULT_TYPOS,(Array.isArray(SUPPLEMENT.typos)?SUPPLEMENT.typos:[]).filter(([wrong,correct])=>wrong&&correct&&wrong!==correct).map(([wrong,correct])=>({wrong,correct,meaning:`“${wrong}”疑似错写，建议结合上下文复核规范写法“${correct}”。`,example:`正确：${correct}`,source:"系统预置·小说常错字"})),"wrong");
+      appendUniqueDefaults(DEFAULT_PUNCTUATION_RULES,(Array.isArray(SUPPLEMENT.punctuationRules)?SUPPLEMENT.punctuationRules:[]).map(item=>({...item,source:"系统预置·符号组合"})),"id");
       const DEFAULT_COLORS = { danger: "#f04f54", punctuation: "#f4b726", idiom: "#4388f4" };
       const DEMO = "雨声非常非常大，沈砚推开窗户，说道：\“你真的决定了？？\”\n\n这份答卷只能算差强人意，他却误以为这是极差的评价。街上万人空巷，空得连一只猫都没有！！多年战乱茶毒百姓，随后他首当其冲地报名参加了比赛。";
 
