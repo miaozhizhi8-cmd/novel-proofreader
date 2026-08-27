@@ -615,7 +615,7 @@
             <div class="idiom-list" id="idiomList"></div>
           </section>
           <section class="setting-view" data-setting-view="punctuation">
-            <h3>明显标点错误规则</h3><p>不检查多个问号、多个感叹号或“？！”等小说强调语气。规则支持修改、停用和删除。</p>
+            <h3>明显标点错误规则</h3><p>依据 GB/T 15834—2011 补全可机械判断的明显错误；不检查多个问号、多个感叹号或“？！”等小说强调语气。规则支持修改、停用和删除。</p>
             <div class="field-stack"><label class="field-label">规则名称<input class="text-input" id="newRuleTitle" maxlength="30" placeholder="例如：重复逗号"></label><label class="field-label">匹配表达式<input class="text-input" id="newRulePattern" maxlength="160" placeholder="正则表达式，例如：[，,]{2,}"></label><label class="field-label">提示说明<input class="text-input" id="newRuleDetail" maxlength="180" placeholder="告诉作者如何修改"></label><button class="primary-btn" id="saveRule" type="button">添加规则</button></div>
             <div class="idiom-toolbar"><input class="text-input" id="ruleSearch" type="search" placeholder="搜索规则"><span class="summary-chip"><b id="ruleTotal">0</b> 条</span></div><div class="idiom-list" id="ruleList"></div>
           </section>
@@ -648,7 +648,7 @@
       "use strict";
 
       const STORAGE_KEY = "novel-proofreader-v1";
-      const DATABASE_VERSION = 5;
+      const DATABASE_VERSION = 6;
       const DEFAULT_TERMS = [
         "非常非常","然后然后","不禁哑然失笑","八九",
         "色情","淫秽","情色","色情描写","露骨描写","成人内容","成人影片","成人视频","黄色影片","黄色图片","黄图","黄文","肉文","床戏","开车文","三级片","无码","裸聊","情色直播","性交易","性服务","卖淫","嫖娼","约炮","一夜情","群交","乱伦","兽交","童妓","幼女色情","未成年性行为",
@@ -676,12 +676,29 @@
         {id:"half-comma",title:"中文句中使用半角逗号",pattern:"[\\u4e00-\\u9fff],[\\u4e00-\\u9fff]",detail:"中文正文通常使用全角逗号“，”。",enabled:true},
         {id:"half-period",title:"中文句中使用半角句点",pattern:"[\\u4e00-\\u9fff]\\.[\\u4e00-\\u9fff]",detail:"中文正文通常使用全角句号“。”。",enabled:true},
         {id:"wrong-ellipsis",title:"省略号写成连续句点",pattern:"(?:\\.{3,}|。{3,})",detail:"中文省略号规范形式为六连点“……”；不要用多个句号代替。",enabled:true},
-        {id:"space-before",title:"标点前多余空格",pattern:"[ \\t]+[，。；：、]",detail:"中文点号前通常不留空格。",enabled:true},
+        {id:"space-before",title:"标点前多余空格",pattern:"[ \\t]+[，。！？；：、）》」』】]",detail:"中文标点前通常不留空格。",enabled:true},
         {id:"quote-comma",title:"对白逗号疑似放在引号外",pattern:"”[，,](?=[^。！？\\n]{0,10}(?:说|问|道|答|喊|叫|骂))",detail:"若后接“他说/她问”等提示语，逗号通常应放在后引号前，如“我知道，”他说。",enabled:true},
         {id:"punct-before-quote",title:"引号前出现两个点号",pattern:"[。！？；，][，。；][”’」』]",detail:"后引号前连续出现两个点号，通常应按句意保留一个。",enabled:true},
         {id:"double-quote",title:"引号重复",pattern:"“{2,}|”{2,}|‘{2,}|’{2,}",detail:"连续重复的前引号或后引号通常是输入错误。",enabled:true},
-        {id:"line-leading",title:"段首出现逗号类点号",pattern:"(?:^|\\n)[ \\t]*[，；：、]",detail:"段落开头直接出现逗号、分号、冒号或顿号，通常是残留标点。",enabled:true},
-        {id:"colon-punct",title:"冒号后紧跟其他点号",pattern:"[：:][，,。；;]",detail:"冒号后不应立即再接逗号、句号或分号。",enabled:true}
+        {id:"line-leading",title:"段首出现无归属点号",pattern:"(?:^|\\n)[ \\t]*[，。；：、]",detail:"段落开头直接出现逗号、句号、分号、冒号或顿号，通常是残留标点。问号、叹号不在此规则内。",enabled:true},
+        {id:"colon-punct",title:"冒号后紧跟其他点号",pattern:"[：:][，,。；;]",detail:"冒号后不应立即再接逗号、句号或分号。",enabled:true},
+        {id:"paragraph-no-end",title:"段落末尾缺少句末标点",pattern:"@paragraph-end",detail:"非空正文段落末尾通常应有句号、问号、叹号或省略号等句末标点；章节名、序章、楔子、番外等标题会自动跳过。",enabled:true},
+        {id:"unbalanced-pairs",title:"引号、括号或书名号未配对",pattern:"@balance",detail:"检查中文单双引号、圆括号、方括号、书名号等成对符号是否缺失、错序或混配。",enabled:true},
+        {id:"half-general",title:"中文语境使用半角分号、冒号、问号或叹号",pattern:"[\\u3400-\\u9fff][;:!?](?=[\\u3400-\\u9fff”’」』）》）\\] \\t\\n]|$)",detail:"中文正文中的分号、冒号、问号和叹号通常应使用全角形式“；：？！”。",enabled:true},
+        {id:"hard-with-emotion",title:"逗号句号等与问号叹号异常叠加",pattern:"[，,。；;：:、][！？!?]|[！？!?][，,。；;：:、]",detail:"问号、叹号可以组合表达强烈语气，但不应与逗号、句号、分号、冒号或顿号直接叠加。",enabled:true},
+        {id:"mixed-parentheses",title:"中英文括号混配",pattern:"（[^）\\n]{0,80}\\)|\\([^）\\n]{0,80}）",detail:"同一组括号不应一边全角、一边半角；中文正文通常使用全角括号“（）”。",enabled:true},
+        {id:"ascii-parentheses",title:"中文内容使用半角括号",pattern:"\\([\\u3400-\\u9fff][^()\\n]{0,80}\\)",detail:"括住中文内容时通常使用全角括号“（）”；代码、公式和纯英文内容可忽略。",enabled:true},
+        {id:"ascii-double-quote",title:"中文内容使用英文直引号",pattern:"\"(?=[\\u3400-\\u9fff])|(?<=[\\u3400-\\u9fff])\"",detail:"中文正文通常使用弯引号“”；英文直引号可能来自输入法或复制粘贴。",enabled:true},
+        {id:"single-ellipsis",title:"省略号只输入了一半",pattern:"(?<!…)…(?!…)",detail:"中文省略号通常写作两个连续的省略号字符“……”，不应只写一个“…”作为省略号。",enabled:true},
+        {id:"long-ellipsis",title:"省略号数量过多",pattern:"…{3,}",detail:"中文省略号的规范形式通常为“……”；连续三个或更多省略号字符应复核。",enabled:true},
+        {id:"two-dots",title:"用两个英文句点代替省略号",pattern:"(?<!\\.)\\.{2}(?!\\.)",detail:"中文省略号应写作“……”，不要使用两个英文句点“..”代替。",enabled:true},
+        {id:"single-dash",title:"破折号只输入了一半",pattern:"(?<!—)—(?!—)",detail:"中文破折号通常写作“——”；单个“—”应复核是否漏输。",enabled:true},
+        {id:"ascii-dash",title:"用连续减号代替破折号",pattern:"-{2,}",detail:"中文破折号通常写作“——”，不要使用连续半角减号代替。",enabled:true},
+        {id:"space-after-open",title:"前引号或前括号后多余空格",pattern:"[“‘（《〈「『【][ \\t]+",detail:"前引号、前括号或前书名号后通常不留空格。",enabled:true},
+        {id:"empty-pair",title:"成对符号内没有内容",pattern:"“[ \\t]*”|‘[ \\t]*’|（[ \\t]*）|《[ \\t]*》|【[ \\t]*】",detail:"引号、括号或书名号中没有文字，通常是残留符号或漏填内容。",enabled:true},
+        {id:"point-after-open",title:"前引号或前括号后紧跟句内点号",pattern:"[“‘（《〈「『【][，。；：、]",detail:"前引号、前括号或前书名号后直接出现逗号、句号、分号、冒号或顿号，通常是标点位置错误。",enabled:true},
+        {id:"angle-book",title:"用小于号大于号代替书名号",pattern:"<[\\u3400-\\u9fff][^<>\\n]{0,80}>",detail:"中文作品名称通常使用书名号“《》”，不要使用半角小于号和大于号代替。",enabled:true},
+        {id:"repeated-open-close",title:"括号或书名号重复输入",pattern:"（{2,}|）{2,}|《{2,}|》{2,}|【{2,}|】{2,}",detail:"连续重复的前后括号或书名号通常是输入错误。",enabled:true}
       ].map(x=>({...x,source:"系统预置"}));
       const DEFAULT_COLORS = { danger: "#f04f54", punctuation: "#f4b726", idiom: "#4388f4" };
       const DEMO = "雨声非常非常大，沈砚推开窗户，说道：\“你真的决定了？？\”\n\n这份答卷只能算差强人意，他却误以为这是极差的评价。街上万人空巷，空得连一只猫都没有！！多年战乱茶毒百姓，随后他首当其冲地报名参加了比赛。";
@@ -757,6 +774,30 @@
         }
         return results;
       }
+      function findPairPunctuationIssues(text){
+        const pairs=new Map([["“","”"],["‘","’"],["（","）"],["《","》"],["〈","〉"],["「","」"],["『","』"],["【","】"],["〔","〕"],["［","］"],["｛","｝"]]);
+        const closing=new Map([...pairs].map(([open,close])=>[close,open])),stack=[],results=[];
+        for(let index=0;index<text.length;index+=1){const ch=text[index];
+          if(pairs.has(ch)){stack.push({ch,index});continue}
+          if(!closing.has(ch))continue;
+          const top=stack[stack.length-1];
+          if(top&&top.ch===closing.get(ch)){stack.pop();continue}
+          results.push({start:index,end:index+1,detail:`后符号“${ch}”没有与之对应的前符号“${closing.get(ch)}”，或嵌套顺序有误。`});
+        }
+        stack.forEach(item=>results.push({start:item.index,end:item.index+1,detail:`前符号“${item.ch}”没有与之对应的后符号“${pairs.get(item.ch)}”。`}));
+        return results.sort((a,b)=>a.start-b.start);
+      }
+      function findParagraphEndIssues(text){
+        const results=[],lineRe=/[^\n]+/g,heading=/^(?:第.{1,12}[章节回卷部篇幕](?:[：:\s].*)?|(?:序章|楔子|番外(?:篇)?|后记|前言|尾声|正文)(?:[：:\s].*)?)$/;let match;
+        while((match=lineRe.exec(text))){
+          const raw=match[0].replace(/\r$/,"");const leading=raw.search(/\S/);if(leading<0)continue;
+          const line=raw.trim();if(!line||heading.test(line))continue;
+          const withoutClosers=line.replace(/[”’」』）》）\]】〕］｝]+$/,"");
+          if(/[。！？!?…—]$/.test(withoutClosers))continue;
+          const last=withoutClosers.length-1;results.push({start:match.index+leading+last,end:match.index+leading+last+1,detail:"这一段结束前没有检测到句号、问号、叹号、省略号或破折号等句末标点。"});
+        }
+        return results;
+      }
 
       function applyColors() {
         const root = document.documentElement;
@@ -783,6 +824,8 @@
         });
 
         state.punctuationRules.filter(rule=>rule.enabled!==false).forEach(rule => {
+          if(rule.pattern==="@balance"){findPairPunctuationIssues(text).forEach(item=>add(item.start,item.end,"punctuation",rule.title,item.detail,""));return}
+          if(rule.pattern==="@paragraph-end"){findParagraphEndIssues(text).forEach(item=>add(item.start,item.end,"punctuation",rule.title,item.detail,""));return}
           let re;try{re=new RegExp(rule.pattern,"gm")}catch(_){return}let match;
           while ((match = re.exec(text))) { add(match.index, match.index + match[0].length, "punctuation", rule.title, rule.detail, ""); if(!match[0])re.lastIndex+=1; }
         });
@@ -936,10 +979,10 @@
       }
 
       function cleanTypo(item,source="用户添加"){const wrong=String(item?.wrong||"").trim().slice(0,24),correct=String(item?.correct||"").trim().slice(0,24),meaning=String(item?.meaning||"").trim().slice(0,160);if(!wrong||!correct)return null;return{wrong,correct,meaning:meaning||`疑似错写，建议改为“${correct}”。`,example:`正确：${correct}`,source:String(item?.source||source).slice(0,20)}}
-      function cleanRule(item,source="用户添加"){const title=String(item?.title||"").trim().slice(0,30),pattern=String(item?.pattern||"").trim().slice(0,160),detail=String(item?.detail||"").trim().slice(0,180);if(!title||!pattern||!detail)return null;try{new RegExp(pattern,"gm")}catch(_){return null}return{id:String(item?.id||`custom-${Date.now()}`),title,pattern,detail,enabled:item?.enabled!==false,source:String(item?.source||source).slice(0,20)}}
+      function cleanRule(item,source="用户添加"){const title=String(item?.title||"").trim().slice(0,30),pattern=String(item?.pattern||"").trim().slice(0,160),detail=String(item?.detail||"").trim().slice(0,180);if(!title||!pattern||!detail)return null;if(!["@balance","@paragraph-end"].includes(pattern)){try{new RegExp(pattern,"gm")}catch(_){return null}}return{id:String(item?.id||`custom-${Date.now()}`),title,pattern,detail,enabled:item?.enabled!==false,source:String(item?.source||source).slice(0,20)}}
 
       function renderTypos(){const keyword=(els.typoSearch?.value||"").trim().toLowerCase(),visible=state.typos.map((item,index)=>({item,index})).filter(({item})=>!keyword||`${item.wrong}${item.correct}${item.meaning}`.toLowerCase().includes(keyword));document.getElementById("typoTotal").textContent=state.typos.length;els.typoList.innerHTML=visible.map(({item,index})=>`<div class="idiom-item"><div><strong>${escapeHtml(item.wrong)} → ${escapeHtml(item.correct)}</strong><p>${escapeHtml(item.meaning||"")}</p><em>${escapeHtml(item.source||"用户添加")}</em></div><div class="item-actions"><button class="edit-btn" data-edit-typo="${index}" type="button">编辑</button><button class="delete-btn" data-delete-typo="${index}" type="button">×</button></div></div>`).join("")||'<div class="hint">错字词库为空。</div>'}
-      function renderRules(){const keyword=(els.ruleSearch?.value||"").trim().toLowerCase(),visible=state.punctuationRules.map((item,index)=>({item,index})).filter(({item})=>!keyword||`${item.title}${item.detail}${item.pattern}`.toLowerCase().includes(keyword));document.getElementById("ruleTotal").textContent=state.punctuationRules.length;els.ruleList.innerHTML=visible.map(({item,index})=>`<div class="idiom-item"><div><strong>${escapeHtml(item.title)}${item.enabled===false?'（已停用）':''}</strong><p>${escapeHtml(item.detail)}</p><code class="rule-pattern">${escapeHtml(item.pattern)}</code></div><div class="item-actions"><button class="edit-btn" data-toggle-rule="${index}" type="button">${item.enabled===false?'启用':'停用'}</button><button class="edit-btn" data-edit-rule="${index}" type="button">编辑</button><button class="delete-btn" data-delete-rule="${index}" type="button">×</button></div></div>`).join("")||'<div class="hint">标点规则为空。</div>'}
+      function renderRules(){const keyword=(els.ruleSearch?.value||"").trim().toLowerCase(),visible=state.punctuationRules.map((item,index)=>({item,index})).filter(({item})=>!keyword||`${item.title}${item.detail}${item.pattern}`.toLowerCase().includes(keyword));document.getElementById("ruleTotal").textContent=state.punctuationRules.length;els.ruleList.innerHTML=visible.map(({item,index})=>`<div class="idiom-item"><div><strong>${escapeHtml(item.title)}${item.enabled===false?'（已停用）':''}</strong><p>${escapeHtml(item.detail)}</p><code class="rule-pattern">${escapeHtml(item.pattern==="@balance"?"自动检查：成对符号":item.pattern==="@paragraph-end"?"自动检查：正文段末":item.pattern)}</code></div><div class="item-actions"><button class="edit-btn" data-toggle-rule="${index}" type="button">${item.enabled===false?'启用':'停用'}</button><button class="edit-btn" data-edit-rule="${index}" type="button">编辑</button><button class="delete-btn" data-delete-rule="${index}" type="button">×</button></div></div>`).join("")||'<div class="hint">标点规则为空。</div>'}
 
       function parseIdiomBatch(raw) {
         const text = raw.replace(/\r/g, "").trim();
