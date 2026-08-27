@@ -426,6 +426,7 @@
     .term-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
     .delete-btn { width: 29px; height: 29px; border: 0; border-radius: 8px; background: transparent; color: #9aa2af; cursor: pointer; }
     .delete-btn:hover { color: var(--danger); background: #fff0f0; }
+    .item-actions{display:flex;align-items:center;gap:4px}.edit-btn{height:29px;padding:0 8px;border:0;border-radius:8px;background:transparent;color:#778196;font-size:11px;cursor:pointer}.edit-btn:hover{background:#eef3ff;color:#3f73f6}.rule-pattern{display:block;margin-top:4px;color:#a0a7b4;font:10px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
     .field-stack { display: grid; gap: 9px; }
     .field-label { display: grid; gap: 5px; color: #697286; font-size: 11px; }
     .field-label .text-input { width: 100%; }
@@ -524,7 +525,9 @@
       </div>
       <div class="settings-popover" id="settingsPopover" aria-hidden="true">
         <button class="settings-item" data-open-settings="terms" type="button"><span>词组管理</span></button>
+        <button class="settings-item" data-open-settings="typos" type="button"><span>错字词库</span></button>
         <button class="settings-item" data-open-settings="idioms" type="button"><span>成语词库</span></button>
+        <button class="settings-item" data-open-settings="punctuation" type="button"><span>标点规则</span></button>
         <button class="settings-item" data-open-settings="colors" type="button"><span>修改标签颜色</span></button>
         <div class="settings-divider"></div>
         <button class="settings-item" id="quickExport" type="button"><span>导出数据包</span></button>
@@ -575,7 +578,9 @@
       <div class="modal-body">
         <nav class="modal-nav">
           <button class="nav-btn active" data-view="terms" type="button">词组管理</button>
+          <button class="nav-btn" data-view="typos" type="button">错字词库</button>
           <button class="nav-btn" data-view="idioms" type="button">成语词库</button>
+          <button class="nav-btn" data-view="punctuation" type="button">标点规则</button>
           <button class="nav-btn" data-view="colors" type="button">标签颜色</button>
           <button class="nav-btn" data-view="data" type="button">数据包</button>
         </nav>
@@ -584,6 +589,11 @@
             <h3>自查词组</h3><p>系统预置词组和你添加的词组都会参与红色标记。预置内容也可以自由删除。</p>
             <div class="input-row"><input class="text-input" id="newTerm" type="text" maxlength="30" placeholder="输入一个要关注的词组"/><button class="primary-btn" id="addTerm" type="button">添加词组</button></div>
             <div class="term-list" id="termList"></div>
+          </section>
+          <section class="setting-view" data-setting-view="typos">
+            <h3>常错字词库</h3><p>输入错误写法、正确写法和说明。系统预置内容也能编辑或删除。</p>
+            <div class="field-stack"><label class="field-label">错误写法<input class="text-input" id="newTypoWrong" maxlength="24" placeholder="例如：茶毒"></label><label class="field-label">正确写法<input class="text-input" id="newTypoCorrect" maxlength="24" placeholder="例如：荼毒"></label><label class="field-label">说明<input class="text-input" id="newTypoMeaning" maxlength="160" placeholder="说明错误原因"></label><button class="primary-btn" id="saveTypo" type="button">添加错字词</button></div>
+            <div class="idiom-toolbar"><input class="text-input" id="typoSearch" type="search" placeholder="搜索错误或正确写法"><span class="summary-chip"><b id="typoTotal">0</b> 条</span></div><div class="idiom-list" id="typoList"></div>
           </section>
           <section class="setting-view" data-setting-view="idioms">
             <h3>易错成语词库</h3><p>查阅或补充需要提醒的成语。正文出现后会用蓝色标记，并显示释义和正确用法。</p>
@@ -604,6 +614,11 @@
             <div class="idiom-toolbar"><input class="text-input" id="idiomSearch" type="search" placeholder="搜索成语或释义" /><span class="summary-chip"><b id="idiomTotal">0</b> 条</span></div>
             <div class="idiom-list" id="idiomList"></div>
           </section>
+          <section class="setting-view" data-setting-view="punctuation">
+            <h3>明显标点错误规则</h3><p>不检查多个问号、多个感叹号或“？！”等小说强调语气。规则支持修改、停用和删除。</p>
+            <div class="field-stack"><label class="field-label">规则名称<input class="text-input" id="newRuleTitle" maxlength="30" placeholder="例如：重复逗号"></label><label class="field-label">匹配表达式<input class="text-input" id="newRulePattern" maxlength="160" placeholder="正则表达式，例如：[，,]{2,}"></label><label class="field-label">提示说明<input class="text-input" id="newRuleDetail" maxlength="180" placeholder="告诉作者如何修改"></label><button class="primary-btn" id="saveRule" type="button">添加规则</button></div>
+            <div class="idiom-toolbar"><input class="text-input" id="ruleSearch" type="search" placeholder="搜索规则"><span class="summary-chip"><b id="ruleTotal">0</b> 条</span></div><div class="idiom-list" id="ruleList"></div>
+          </section>
           <section class="setting-view" data-setting-view="colors">
             <h3>边签与标记颜色</h3><p>修改后立即生效，并保存在当前浏览器。建议三类问题保持足够的颜色差异。</p>
             <div class="color-grid">
@@ -613,12 +628,12 @@
             </div>
           </section>
           <section class="setting-view" data-setting-view="data">
-            <h3>导入与导出</h3><p>数据包为 JSON 文件，包含词组、成语词库和标签颜色，不包含你的小说原文。</p>
+            <h3>导入与导出</h3><p>数据包为 JSON 文件，包含词组、错字词、成语、标点规则和标签颜色，不包含你的小说原文。</p>
             <div class="data-actions">
               <div class="data-card"><strong>导出数据包</strong><p>备份当前词组和颜色设置，方便换设备继续使用。</p><button class="wide-btn" id="exportData" type="button">下载 JSON</button></div>
               <div class="data-card"><strong>导入数据包</strong><p>读取之前导出的 JSON 文件，并覆盖当前设置。</p><button class="wide-btn" id="importData" type="button">选择文件</button></div>
             </div>
-            <div class="hint">兼容格式：<code>{ "terms": ["词组"], "idioms": [{ "term": "成语", "meaning": "释义", "example": "举例" }], "colors": { ... } }</code>。</div>
+            <div class="hint">兼容旧数据包；新版还包含 <code>typos</code> 和 <code>punctuationRules</code>。所有系统预置词条均可编辑或删除。</div>
           </section>
         </div>
       </div>
@@ -632,33 +647,32 @@
       "use strict";
 
       const STORAGE_KEY = "novel-proofreader-v1";
+      const DATABASE_VERSION = 3;
       const DEFAULT_TERMS = [
         { text: "非常非常", source: "系统预置" },
         { text: "然后然后", source: "系统预置" },
         { text: "不禁哑然失笑", source: "系统预置" }
       ];
       const DEFAULT_IDIOMS = [
-        { term: "差强人意", meaning: "大体上还能使人满意，并不是“很不满意”。", example: "这次改稿虽有瑕疵，整体表现还算差强人意。", source: "系统预置" },
-        { term: "首当其冲", meaning: "最先受到攻击或遭遇灾难，不是“第一个去做”。", example: "暴雨来临时，沿江低洼地区首当其冲。", source: "系统预置" },
-        { term: "不刊之论", meaning: "正确得不能修改的言论，不是“不能刊登的言论”。", example: "他的这番分析堪称不刊之论。", source: "系统预置" },
-        { term: "明日黄花", meaning: "比喻过时或失去意义的事物，不能说“昨日黄花”。", example: "曾经流行的玩法如今已是明日黄花。", source: "系统预置" },
-        { term: "炙手可热", meaning: "气焰很盛、权势很大，常含贬义，不只是“热门”。", example: "那位权臣一时炙手可热，无人敢忤逆。", source: "系统预置" },
-        { term: "万人空巷", meaning: "人们都从巷里出来，形容庆祝、欢迎等盛况，不是街上没人。", example: "夺冠队伍归来时，城中万人空巷。", source: "系统预置" },
-        { term: "荼毒", meaning: "荼是一种苦菜；荼毒比喻毒害、残害。", example: "战争多年，百姓深受荼毒。", source: "系统预置" }
-      ];
-      const MISTYPED_IDIOMS = [
-        { wrong: "茶毒", correct: "荼毒", meaning: "“荼”指苦菜，引申为毒害；这里不能写成茶叶的“茶”。", example: "正确：战争多年，百姓深受荼毒。" },
-        { wrong: "按步就班", correct: "按部就班", meaning: "“部”指门类、次序，应写作“按部就班”。", example: "正确：工作需要按部就班地推进。" },
-        { wrong: "再接再励", correct: "再接再厉", meaning: "“厉”有磨砺、奋勉之意，应写作“再接再厉”。", example: "正确：希望大家再接再厉，完成最后一轮修改。" },
-        { wrong: "一诺千斤", correct: "一诺千金", meaning: "承诺价值千金，应写作“一诺千金”。", example: "正确：他向来一诺千金，从不食言。" },
-        { wrong: "迫不急待", correct: "迫不及待", meaning: "急迫得来不及等待，应写作“迫不及待”。", example: "正确：她迫不及待地拆开了信封。" },
-        { wrong: "金壁辉煌", correct: "金碧辉煌", meaning: "“碧”指翠绿色，应写作“金碧辉煌”。", example: "正确：殿内装饰得金碧辉煌。" },
-        { wrong: "走头无路", correct: "走投无路", meaning: "“投”指投奔，应写作“走投无路”。", example: "正确：他被逼得走投无路。" },
-        { wrong: "谈笑风声", correct: "谈笑风生", meaning: "“风生”形容谈话活跃，应写作“谈笑风生”。", example: "正确：席间众人谈笑风生。" },
-        { wrong: "默守成规", correct: "墨守成规", meaning: "典故与墨子守城有关，应写作“墨守成规”。", example: "正确：写作可以借鉴规则，但不必墨守成规。" },
-        { wrong: "名符其实", correct: "名副其实", meaning: "“副”表示符合，应写作“名副其实”。", example: "正确：这部作品称得上名副其实的佳作。" },
-        { wrong: "穿流不息", correct: "川流不息", meaning: "像河川一样连续不断，应写作“川流不息”。", example: "正确：街上的车辆川流不息。" }
-      ];
+        ["差强人意","大体上还能使人满意，并非“很不满意”。","这次改稿虽有瑕疵，整体表现还算差强人意。"],["首当其冲","最先受到攻击或遭遇灾难，不是“第一个去做”。","暴雨来临时，沿江低洼地区首当其冲。"],["不刊之论","正确得不能改动的言论，不是不能刊登。","这番分析被视为不刊之论。"],["明日黄花","比喻已经过时或失去意义的事物。","昔日流行的做法如今已是明日黄花。"],["炙手可热","权势很盛、气焰很大，常含贬义。","那位权臣一时炙手可热。"],["万人空巷","人们都走出巷子，形容庆祝或欢迎的盛况。","夺冠队伍归来时，城中万人空巷。"],["七月流火","指天气开始转凉，不是形容盛夏炎热。","七月流火，凉意渐生。"],["不足为训","不能作为准则或典范，不是“不值得教训”。","这种处理方式不足为训。"],["不孚众望","不能使众人信服，与“不负众望”含义相反。","他的表现不孚众望。"],["不负众望","没有辜负众人的期望。","她最终夺冠，不负众望。"],["久假不归","长期借用而不归还；“假”是借。","这部孤本被他久假不归。"],["屡试不爽","屡次试验都没有差错；“爽”是差错。","这个办法屡试不爽。"],["文不加点","文章一气写成，无须修改，不是没有标点。","他才思敏捷，落笔文不加点。"],["洛阳纸贵","作品广泛流传、风行一时。","新作问世后洛阳纸贵。"],["目无全牛","技艺纯熟，已把握事物内在规律。","多年练习后，他已达到目无全牛的境界。"],["罪不容诛","罪恶极大，处死也不能抵偿，不是罪不至死。","此人恶行累累，实在罪不容诛。"],["望其项背","能够赶得上，常与否定词连用。","他的造诣极高，后辈难以望其项背。"],["登堂入室","学问或技艺由浅入深，达到高深程度。","她的书法已渐渐登堂入室。"],["如坐春风","受到良师教诲熏陶，不单指环境舒适。","听先生讲学，令人如坐春风。"],["耳提面命","恳切教导，含褒义，不是当面训斥。","长辈对他耳提面命。"],["三人成虎","谣言反复传播，可能使人信以为真。","流言传久了，难免三人成虎。"],["休戚相关","彼此祸福相连，关系密切。","两地百姓休戚相关。"],["不名一文","穷得一个钱也没有；“名”是占有。","他落难后一度不名一文。"],["细大不捐","小的大的都不抛弃；“捐”是舍弃。","整理史料时应细大不捐。"],["师心自用","以自己心意为师，固执己见，含贬义。","做学问不可师心自用。"],["振聋发聩","用言论唤醒糊涂麻木的人。","这番警示振聋发聩。"],["美轮美奂","多形容建筑物高大华美。","新落成的宫殿美轮美奂。"],["相敬如宾","多形容夫妻互相尊敬。","夫妻二人多年相敬如宾。"],["举案齐眉","形容夫妻互相敬爱。","他们成婚后举案齐眉。"],["破镜重圆","比喻夫妻失散或决裂后重新团聚。","二人历经波折终于破镜重圆。"],["青梅竹马","多指男女幼年亲密相处。","两人自幼青梅竹马。"],["豆蔻年华","旧指女子十三四岁的年纪。","她正值豆蔻年华。"],["及笄年华","旧指女子十五岁左右。","少女到了及笄年华。"],["弱冠之年","旧指男子二十岁左右。","他正值弱冠之年。"],["汗牛充栋","形容藏书或著作很多。","馆中典籍汗牛充栋。"],["罄竹难书","形容罪行多得写不完。","其罪行罄竹难书。"],["不胫而走","消息等迅速传播，不是东西丢失。","消息很快不胫而走。"],["首鼠两端","迟疑不决或动摇不定，含贬义。","临事首鼠两端，终误大局。"],["危言危行","说正直的话，做正直的事；“危”是正直。","君子危言危行。"],["期期艾艾","形容口吃，不是吞吞吐吐地期待。","他一紧张便期期艾艾。"],["身无长物","除自身外没有多余财物，形容贫穷。","他为官清廉，身无长物。"],["侧目而视","因畏惧或愤恨而不敢正视。","众人对权臣侧目而视。"],["惨淡经营","苦心谋划、从事某项事业。","他惨淡经营多年，终于打开局面。"],["不以为然","不认为是正确的；不同于“不在意”。","他对这种说法不以为然。"],["不以为意","不把某事放在心上。","众人劝阻，他却不以为意。"],["一蹴而就","踏一步便成功，比喻事情轻易完成。","长篇创作不可能一蹴而就。"],["鼎力相助","敬辞，用于感谢别人给予大力帮助。","多谢诸位鼎力相助。"],["蓬荜生辉","谦辞，表示客人到来使自家增光。","贵客登门，令寒舍蓬荜生辉。"],["敬谢不敏","谦辞，表示能力不足而推辞。","此项重任我只能敬谢不敏。"],["曾几何时","时间过去没有多久，不是“曾经”。","曾几何时，这里还是一片荒地。"],["大方之家","见识广博或精通某种技艺的人。","此文浅陋，恐贻笑大方之家。"],["江河日下","情况一天天衰落，不形容自然江河。","店铺经营江河日下。"],["胸无城府","待人坦率，没有心机，通常含褒义。","他为人坦荡，胸无城府。"],["无所不至","没有达不到的地方，也常指坏事做尽。","为谋私利，他几乎无所不至。"],["无微不至","关怀照顾得非常细致周到。","她对病人照顾得无微不至。"],["不忍卒读","文章内容悲惨动人，使人不忍读完。","这封绝笔字字泣血，令人不忍卒读。"],["噤若寒蝉","因害怕而不敢说话。","众人慑于权势，噤若寒蝉。"],["对簿公堂","在公堂上受审或质证，不只是双方争论。","双方最终对簿公堂。"],["瓜田李下","容易引起嫌疑的场合。","瓜田李下，应注意避嫌。"],["呼之欲出","文学形象生动，也可指真相即将显露。","人物写得丰满，呼之欲出。"],["巧夺天工","人工技艺精巧胜过天然。","这件玉雕巧夺天工。"],["浩如烟海","形容文献、资料等极其丰富。","相关史料浩如烟海。"],["安土重迁","安于故土，不愿轻易迁居。","村民安土重迁，不愿远离故园。"]
+      ].map(([term,meaning,example])=>({term,meaning,example,source:"系统预置"}));
+      const DEFAULT_TYPOS = [
+        ["茶毒","荼毒"],["按步就班","按部就班"],["再接再励","再接再厉"],["一诺千斤","一诺千金"],["迫不急待","迫不及待"],["金壁辉煌","金碧辉煌"],["走头无路","走投无路"],["谈笑风声","谈笑风生"],["默守成规","墨守成规"],["名符其实","名副其实"],["穿流不息","川流不息"],["暗然神伤","黯然神伤"],["变本加利","变本加厉"],["甘败下风","甘拜下风"],["自抱自弃","自暴自弃"],["一愁莫展","一筹莫展"],["针贬时弊","针砭时弊"],["世外桃园","世外桃源"],["相形见拙","相形见绌"],["责无旁代","责无旁贷"],["气势凶凶","气势汹汹"],["不径而走","不胫而走"],["一泄千里","一泻千里"],["出奇不意","出其不意"],["悬梁刺骨","悬梁刺股"],["饮鸠止渴","饮鸩止渴"],["趋之若骛","趋之若鹜"],["草管人命","草菅人命"],["人情事故","人情世故"],["一如即往","一如既往"],["竭泽而鱼","竭泽而渔"],["挺而走险","铤而走险"],["旁证博引","旁征博引"],["手屈一指","首屈一指"],["鬼鬼崇崇","鬼鬼祟祟"],["娇揉造作","矫揉造作"],["脍灸人口","脍炙人口"],["烩炙人口","脍炙人口"],["声名雀起","声名鹊起"],["鳞次节比","鳞次栉比"],["舔犊情深","舐犊情深"],["九宵云外","九霄云外"],["蛛丝蚂迹","蛛丝马迹"],["萎糜不振","萎靡不振"],["坐阵指挥","坐镇指挥"],["床第之私","床笫之私"],["仗义直言","仗义执言"],["按奈不住","按捺不住"],["消声匿迹","销声匿迹"],["提纲携领","提纲挈领"],["融汇贯通","融会贯通"],["全神灌注","全神贯注"],["惹事生非","惹是生非"],["纷至踏来","纷至沓来"],["投机捣把","投机倒把"],["不醒人事","不省人事"],["哀声叹气","唉声叹气"],["额首称庆","额手称庆"],["英雄倍出","英雄辈出"],["关怀倍至","关怀备至"],["山青水秀","山清水秀"],["貌和神离","貌合神离"],["老生长谈","老生常谈"],["工程峻工","工程竣工"],["不可思义","不可思议"],["举止安祥","举止安详"],["张慌失措","张皇失措"],["心浮气燥","心浮气躁"],["消遥自在","逍遥自在"],["出类拔粹","出类拔萃"],["鞠躬尽粹","鞠躬尽瘁"],["披星带月","披星戴月"],["有持无恐","有恃无恐"],["一股作气","一鼓作气"],["言简意骇","言简意赅"],["粗制烂造","粗制滥造"],["滥芋充数","滥竽充数"],["搬门弄斧","班门弄斧"],["趁心如意","称心如意"],["调以轻心","掉以轻心"],["蜂涌而至","蜂拥而至"],["换然一新","焕然一新"],["既往不究","既往不咎"],["磬竹难书","罄竹难书"],["掩旗息鼓","偃旗息鼓"],["震憾","震撼"],["松驰","松弛"],["渡假","度假"],["侯车室","候车室"],["水笼头","水龙头"],["老俩口","老两口"],["大姆指","大拇指"],["坐右铭","座右铭"],["蒸溜水","蒸馏水"],["装祯","装帧"],["痉孪","痉挛"],["陷井","陷阱"]
+      ].map(([wrong,correct])=>({wrong,correct,meaning:`“${wrong}”疑似形近字或固定词写错，规范写法为“${correct}”。`,example:`正确：${correct}`,source:"系统预置"}));
+      const DEFAULT_PUNCTUATION_RULES = [
+        {id:"duplicate-hard",title:"重复逗号或句末点号",pattern:"([，,。；;：:、])\\1+",detail:"连续出现相同的逗号、句号、分号、冒号或顿号，通常应只保留一个。",enabled:true},
+        {id:"mixed-end",title:"逗号与句末标点连用",pattern:"[，,][。；;：:]|[。；;：:][，,]",detail:"逗号与句号、分号或冒号紧挨出现，通常应按语义保留其中一个。",enabled:true},
+        {id:"mixed-cn-en",title:"全角半角标点叠加",pattern:"，,|,，|。\\.|\\.。|；;|;；|：:|:：",detail:"同一位置同时出现全角和半角标点，应统一并只保留一个。",enabled:true},
+        {id:"half-comma",title:"中文句中使用半角逗号",pattern:"[\\u4e00-\\u9fff],[\\u4e00-\\u9fff]",detail:"中文正文通常使用全角逗号“，”。",enabled:true},
+        {id:"half-period",title:"中文句中使用半角句点",pattern:"[\\u4e00-\\u9fff]\\.[\\u4e00-\\u9fff]",detail:"中文正文通常使用全角句号“。”。",enabled:true},
+        {id:"wrong-ellipsis",title:"省略号写成连续句点",pattern:"(?:\\.{3,}|。{3,})",detail:"中文省略号规范形式为六连点“……”；不要用多个句号代替。",enabled:true},
+        {id:"space-before",title:"标点前多余空格",pattern:"[ \\t]+[，。；：、]",detail:"中文点号前通常不留空格。",enabled:true},
+        {id:"quote-comma",title:"对白逗号疑似放在引号外",pattern:"”[，,](?=[^。！？\\n]{0,10}(?:说|问|道|答|喊|叫|骂))",detail:"若后接“他说/她问”等提示语，逗号通常应放在后引号前，如“我知道，”他说。",enabled:true},
+        {id:"punct-before-quote",title:"引号前出现两个点号",pattern:"[。！？；，][，。；][”’」』]",detail:"后引号前连续出现两个点号，通常应按句意保留一个。",enabled:true},
+        {id:"double-quote",title:"引号重复",pattern:"“{2,}|”{2,}|‘{2,}|’{2,}",detail:"连续重复的前引号或后引号通常是输入错误。",enabled:true},
+        {id:"line-leading",title:"段首出现逗号类点号",pattern:"(?:^|\\n)[ \\t]*[，；：、]",detail:"段落开头直接出现逗号、分号、冒号或顿号，通常是残留标点。",enabled:true},
+        {id:"colon-punct",title:"冒号后紧跟其他点号",pattern:"[：:][，,。；;]",detail:"冒号后不应立即再接逗号、句号或分号。",enabled:true}
+      ].map(x=>({...x,source:"系统预置"}));
       const DEFAULT_COLORS = { danger: "#f04f54", punctuation: "#f4b726", idiom: "#4388f4" };
       const DEMO = "雨声非常非常大，沈砚推开窗户，说道：\“你真的决定了？？\”\n\n这份答卷只能算差强人意，他却误以为这是极差的评价。街上万人空巷，空得连一只猫都没有！！多年战乱茶毒百姓，随后他首当其冲地报名参加了比赛。";
 
@@ -668,6 +682,7 @@
         resultState: document.getElementById("resultState"), settingsBtn: document.getElementById("settingsBtn"), popover: document.getElementById("settingsPopover"),
         modal: document.getElementById("settingsModal"), termList: document.getElementById("termList"), newTerm: document.getElementById("newTerm"),
         idiomList: document.getElementById("idiomList"), idiomSearch: document.getElementById("idiomSearch"), idiomBatch: document.getElementById("idiomBatch"),
+        typoList: document.getElementById("typoList"), typoSearch: document.getElementById("typoSearch"), ruleList: document.getElementById("ruleList"), ruleSearch: document.getElementById("ruleSearch"),
         fileInput: document.getElementById("fileInput"), toast: document.getElementById("toast")
       };
 
@@ -676,18 +691,29 @@
       let activeIssueId = null;
       let toastTimer = null;
       let inputTimer = null;
+      let editingTypo = -1;
+      let editingRule = -1;
+      let editingTerm = -1;
+      let editingIdiom = -1;
+
+      function cloneList(list){ return list.map(item => ({...item})); }
+      function mergeDefaults(saved, defaults, key){ const map=new Map((Array.isArray(saved)?saved:[]).map(item=>[item?.[key],item])); defaults.forEach(item=>{if(!map.has(item[key]))map.set(item[key],{...item})}); return [...map.values()].filter(item=>item?.[key]); }
 
       function loadState() {
         try {
           const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+          const upgrading=saved && Number(saved.databaseVersion||0)<DATABASE_VERSION;
           return {
-            terms: Array.isArray(saved?.terms) ? saved.terms : DEFAULT_TERMS,
-            idioms: Array.isArray(saved?.idioms) ? saved.idioms : DEFAULT_IDIOMS.map(item => ({ ...item })),
+            databaseVersion: DATABASE_VERSION,
+            terms: Array.isArray(saved?.terms) ? saved.terms : cloneList(DEFAULT_TERMS),
+            idioms: upgrading ? mergeDefaults(saved?.idioms,DEFAULT_IDIOMS,"term") : (Array.isArray(saved?.idioms)?saved.idioms:cloneList(DEFAULT_IDIOMS)),
+            typos: upgrading ? mergeDefaults(saved?.typos,DEFAULT_TYPOS,"wrong") : (Array.isArray(saved?.typos)?saved.typos:cloneList(DEFAULT_TYPOS)),
+            punctuationRules: upgrading ? mergeDefaults(saved?.punctuationRules,DEFAULT_PUNCTUATION_RULES,"id") : (Array.isArray(saved?.punctuationRules)?saved.punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES)),
             colors: { ...DEFAULT_COLORS, ...(saved?.colors || {}) },
             source: typeof saved?.source === "string" ? saved.source : "",
             issueStatus: saved?.issueStatus && typeof saved.issueStatus === "object" ? saved.issueStatus : {}
           };
-        } catch (_) { return { terms: DEFAULT_TERMS, idioms: DEFAULT_IDIOMS.map(item => ({ ...item })), colors: DEFAULT_COLORS, source: "", issueStatus: {} }; }
+        } catch (_) { return { databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),idioms:cloneList(DEFAULT_IDIOMS),typos:cloneList(DEFAULT_TYPOS),punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{} }; }
       }
 
       function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
@@ -718,15 +744,9 @@
           while ((match = re.exec(text))) add(match.index, match.index + term.length, "sensitive", `关注词组：${term}`, "这是词库中需要作者复核的词组。请结合上下文判断是否删改。", "");
         });
 
-        const punctuationRules = [
-          { re: /([！？?!。；;，,、…])\1+/g, title: "重复标点", detail: "连续使用相同标点。小说语气需要加强时可以保留，但建议统一风格。" },
-          { re: /[，,][。！？?!]/g, title: "标点混用", detail: "逗号后紧跟句末标点，通常应保留其中一个。" },
-          { re: /[。！？?!][，,]/g, title: "标点次序异常", detail: "句末标点后又出现逗号，建议检查断句。" },
-          { re: /[\u4e00-\u9fff],[\u4e00-\u9fff]/g, title: "中文语境使用半角逗号", detail: "中文正文通常使用全角逗号“，”。" }
-        ];
-        punctuationRules.forEach(rule => {
-          let match;
-          while ((match = rule.re.exec(text))) add(match.index, match.index + match[0].length, "punctuation", rule.title, rule.detail, "");
+        state.punctuationRules.filter(rule=>rule.enabled!==false).forEach(rule => {
+          let re;try{re=new RegExp(rule.pattern,"gm")}catch(_){return}let match;
+          while ((match = re.exec(text))) { add(match.index, match.index + match[0].length, "punctuation", rule.title, rule.detail, ""); if(!match[0])re.lastIndex+=1; }
         });
 
         state.idioms.forEach(item => {
@@ -735,7 +755,7 @@
           while ((match = re.exec(text))) add(match.index, match.index + item.term.length, "idiom", `易错成语：${item.term}`, item.meaning, item.example ? `例：${item.example.replace(/^例[：:]?/, "")}` : "");
         });
 
-        MISTYPED_IDIOMS.forEach(item => {
+        state.typos.forEach(item => {
           const re = new RegExp(escapeRegExp(item.wrong), "g");
           let match;
           while ((match = re.exec(text))) add(match.index, match.index + item.wrong.length, "idiom", `疑似错写：${item.wrong} → ${item.correct}`, item.meaning, item.example);
@@ -860,7 +880,7 @@
           const term = typeof item === "string" ? { text: item, source: "用户添加" } : item;
           const row = document.createElement("div");
           row.className = "term-item";
-          row.innerHTML = `<div class="term-copy"><strong>${escapeHtml(term.text)}</strong><span>${escapeHtml(term.source || "用户添加")}</span></div><button class="delete-btn" data-delete-term="${index}" type="button" title="删除">×</button>`;
+          row.innerHTML = `<div class="term-copy"><strong>${escapeHtml(term.text)}</strong><span>${escapeHtml(term.source || "用户添加")}</span></div><div class="item-actions"><button class="edit-btn" data-edit-term="${index}" type="button">编辑</button><button class="delete-btn" data-delete-term="${index}" type="button" title="删除">×</button></div>`;
           els.termList.appendChild(row);
         });
       }
@@ -872,6 +892,12 @@
         if (!term || !meaning || !example) return null;
         return { term, meaning, example, source: String(item?.source || source).slice(0, 20) };
       }
+
+      function cleanTypo(item,source="用户添加"){const wrong=String(item?.wrong||"").trim().slice(0,24),correct=String(item?.correct||"").trim().slice(0,24),meaning=String(item?.meaning||"").trim().slice(0,160);if(!wrong||!correct)return null;return{wrong,correct,meaning:meaning||`疑似错写，建议改为“${correct}”。`,example:`正确：${correct}`,source:String(item?.source||source).slice(0,20)}}
+      function cleanRule(item,source="用户添加"){const title=String(item?.title||"").trim().slice(0,30),pattern=String(item?.pattern||"").trim().slice(0,160),detail=String(item?.detail||"").trim().slice(0,180);if(!title||!pattern||!detail)return null;try{new RegExp(pattern,"gm")}catch(_){return null}return{id:String(item?.id||`custom-${Date.now()}`),title,pattern,detail,enabled:item?.enabled!==false,source:String(item?.source||source).slice(0,20)}}
+
+      function renderTypos(){const keyword=(els.typoSearch?.value||"").trim().toLowerCase(),visible=state.typos.map((item,index)=>({item,index})).filter(({item})=>!keyword||`${item.wrong}${item.correct}${item.meaning}`.toLowerCase().includes(keyword));document.getElementById("typoTotal").textContent=state.typos.length;els.typoList.innerHTML=visible.map(({item,index})=>`<div class="idiom-item"><div><strong>${escapeHtml(item.wrong)} → ${escapeHtml(item.correct)}</strong><p>${escapeHtml(item.meaning||"")}</p><em>${escapeHtml(item.source||"用户添加")}</em></div><div class="item-actions"><button class="edit-btn" data-edit-typo="${index}" type="button">编辑</button><button class="delete-btn" data-delete-typo="${index}" type="button">×</button></div></div>`).join("")||'<div class="hint">错字词库为空。</div>'}
+      function renderRules(){const keyword=(els.ruleSearch?.value||"").trim().toLowerCase(),visible=state.punctuationRules.map((item,index)=>({item,index})).filter(({item})=>!keyword||`${item.title}${item.detail}${item.pattern}`.toLowerCase().includes(keyword));document.getElementById("ruleTotal").textContent=state.punctuationRules.length;els.ruleList.innerHTML=visible.map(({item,index})=>`<div class="idiom-item"><div><strong>${escapeHtml(item.title)}${item.enabled===false?'（已停用）':''}</strong><p>${escapeHtml(item.detail)}</p><code class="rule-pattern">${escapeHtml(item.pattern)}</code></div><div class="item-actions"><button class="edit-btn" data-toggle-rule="${index}" type="button">${item.enabled===false?'启用':'停用'}</button><button class="edit-btn" data-edit-rule="${index}" type="button">编辑</button><button class="delete-btn" data-delete-rule="${index}" type="button">×</button></div></div>`).join("")||'<div class="hint">标点规则为空。</div>'}
 
       function parseIdiomBatch(raw) {
         const text = raw.replace(/\r/g, "").trim();
@@ -908,7 +934,7 @@
         visible.forEach(({ item, index }) => {
           const row = document.createElement("div");
           row.className = "idiom-item";
-          row.innerHTML = `<div><strong>${escapeHtml(item.term)}</strong><p>${escapeHtml(item.meaning)}</p><em>例：${escapeHtml(item.example.replace(/^例[：:]?\s*/, ""))} · ${escapeHtml(item.source || "用户添加")}</em></div><button class="delete-btn" data-delete-idiom="${index}" type="button" title="删除">×</button>`;
+          row.innerHTML = `<div><strong>${escapeHtml(item.term)}</strong><p>${escapeHtml(item.meaning)}</p><em>例：${escapeHtml(item.example.replace(/^例[：:]?\s*/, ""))} · ${escapeHtml(item.source || "用户添加")}</em></div><div class="item-actions"><button class="edit-btn" data-edit-idiom="${index}" type="button">编辑</button><button class="delete-btn" data-delete-idiom="${index}" type="button" title="删除">×</button></div>`;
           els.idiomList.appendChild(row);
         });
       }
@@ -920,11 +946,12 @@
         document.querySelectorAll(".setting-view").forEach(panel => panel.classList.toggle("active", panel.dataset.settingView === view));
         renderTerms();
         renderIdioms();
+        renderTypos();renderRules();
       }
       function closeSettings() { els.modal.classList.remove("open"); }
 
       function exportData() {
-        const payload = { app: "字句校对台", version: 2, exportedAt: new Date().toISOString(), terms: state.terms, idioms: state.idioms, colors: state.colors };
+        const payload = { app: "字句校对台", version: 3, databaseVersion:DATABASE_VERSION, exportedAt: new Date().toISOString(), terms: state.terms, typos:state.typos, idioms: state.idioms, punctuationRules:state.punctuationRules, colors: state.colors };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -942,13 +969,16 @@
             if (!Array.isArray(data.terms)) throw new Error("词组格式不正确");
             const cleanTerms = data.terms.map(item => typeof item === "string" ? { text: item.slice(0,30), source: "导入数据" } : { text: String(item.text || "").slice(0,30), source: String(item.source || "导入数据") }).filter(item => item.text);
             const cleanIdioms = Array.isArray(data.idioms) ? data.idioms.map(item => cleanIdiom(item, "数据包导入")).filter(Boolean) : state.idioms;
+            const cleanTypos = Array.isArray(data.typos) ? data.typos.map(item=>cleanTypo(item,"数据包导入")).filter(Boolean) : state.typos;
+            const cleanRules = Array.isArray(data.punctuationRules) ? data.punctuationRules.map(item=>cleanRule(item,"数据包导入")).filter(Boolean) : state.punctuationRules;
             const cleanColors = { ...state.colors };
             Object.keys(DEFAULT_COLORS).forEach(key => { if (/^#[0-9a-f]{6}$/i.test(data.colors?.[key])) cleanColors[key] = data.colors[key]; });
             state.terms = cleanTerms;
             state.idioms = cleanIdioms;
+            state.typos=cleanTypos;state.punctuationRules=cleanRules;state.databaseVersion=DATABASE_VERSION;
             state.colors = cleanColors;
-            saveState(); applyColors(); renderTerms(); renderIdioms(); analyze();
-            showToast(`已导入 ${cleanTerms.length} 个词组和 ${cleanIdioms.length} 条成语`);
+            saveState(); applyColors(); renderTerms(); renderIdioms(); renderTypos();renderRules();analyze();
+            showToast(`已导入 ${cleanTerms.length} 个词组、${cleanTypos.length} 条错字词和 ${cleanIdioms.length} 条成语`);
           } catch (error) { showToast(`导入失败：${error.message}`); }
           els.fileInput.value = "";
         };
@@ -996,11 +1026,11 @@
       document.getElementById("addTerm").addEventListener("click", () => {
         const text = els.newTerm.value.trim();
         if (!text) return showToast("请输入词组");
-        if (state.terms.some(item => (typeof item === "string" ? item : item.text) === text)) return showToast("词组已存在");
-        state.terms.unshift({ text, source: "用户添加" }); els.newTerm.value = ""; saveState(); renderTerms(); analyze(); showToast("词组已添加");
+        if (state.terms.some((item,index) => index!==editingTerm&&(typeof item === "string" ? item : item.text) === text)) return showToast("词组已存在");
+        if(editingTerm>=0)state.terms.splice(editingTerm,1,{text,source:"用户修改"});else state.terms.unshift({ text, source: "用户添加" }); els.newTerm.value = "";document.getElementById("addTerm").textContent="添加词组";editingTerm=-1;saveState(); renderTerms(); analyze(); showToast("词组已保存");
       });
       els.newTerm.addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("addTerm").click(); });
-      els.termList.addEventListener("click", e => { const btn = e.target.closest("[data-delete-term]"); if (!btn) return; state.terms.splice(Number(btn.dataset.deleteTerm), 1); saveState(); renderTerms(); analyze(); });
+      els.termList.addEventListener("click", e => {const edit=e.target.closest("[data-edit-term]");if(edit){editingTerm=Number(edit.dataset.editTerm);const item=state.terms[editingTerm];els.newTerm.value=typeof item==="string"?item:item.text;document.getElementById("addTerm").textContent="保存修改";els.newTerm.focus();return}const btn = e.target.closest("[data-delete-term]"); if (!btn) return; state.terms.splice(Number(btn.dataset.deleteTerm), 1); saveState(); renderTerms(); analyze(); });
       document.getElementById("addIdiom").addEventListener("click", () => {
         const item = cleanIdiom({
           term: document.getElementById("newIdiomTerm").value,
@@ -1008,10 +1038,10 @@
           example: document.getElementById("newIdiomExample").value
         });
         if (!item) return showToast("请完整填写成语、释义和举例");
-        const existingIndex = state.idioms.findIndex(entry => entry.term === item.term);
-        if (existingIndex >= 0) state.idioms.splice(existingIndex, 1, item); else state.idioms.unshift(item);
+        const existingIndex = editingIdiom>=0?editingIdiom:state.idioms.findIndex(entry => entry.term === item.term);
+        if (existingIndex >= 0) state.idioms.splice(existingIndex, 1, {...item,source:"用户修改"}); else state.idioms.unshift(item);
         ["newIdiomTerm", "newIdiomMeaning", "newIdiomExample"].forEach(id => document.getElementById(id).value = "");
-        saveState(); renderIdioms(); analyze(); showToast(existingIndex >= 0 ? "已更新成语词条" : "成语已添加");
+        editingIdiom=-1;document.getElementById("addIdiom").textContent="添加成语";saveState(); renderIdioms(); analyze(); showToast(existingIndex >= 0 ? "已更新成语词条" : "成语已添加");
       });
       document.getElementById("importIdioms").addEventListener("click", () => {
         const imported = parseIdiomBatch(els.idiomBatch.value);
@@ -1027,9 +1057,14 @@
       });
       els.idiomSearch.addEventListener("input", renderIdioms);
       els.idiomList.addEventListener("click", e => {
+        const edit=e.target.closest("[data-edit-idiom]");if(edit){editingIdiom=Number(edit.dataset.editIdiom);const item=state.idioms[editingIdiom];document.getElementById("newIdiomTerm").value=item.term;document.getElementById("newIdiomMeaning").value=item.meaning;document.getElementById("newIdiomExample").value=item.example;document.getElementById("addIdiom").textContent="保存修改";document.getElementById("newIdiomTerm").focus();return}
         const btn = e.target.closest("[data-delete-idiom]"); if (!btn) return;
         state.idioms.splice(Number(btn.dataset.deleteIdiom), 1); saveState(); renderIdioms(); analyze(); showToast("成语词条已删除");
       });
+      document.getElementById("saveTypo").addEventListener("click",()=>{const item=cleanTypo({wrong:document.getElementById("newTypoWrong").value,correct:document.getElementById("newTypoCorrect").value,meaning:document.getElementById("newTypoMeaning").value},editingTypo>=0?"用户修改":"用户添加");if(!item)return showToast("请填写错误写法和正确写法");const duplicate=state.typos.findIndex((x,i)=>i!==editingTypo&&x.wrong===item.wrong);if(duplicate>=0)return showToast("错误写法已存在");if(editingTypo>=0)state.typos.splice(editingTypo,1,item);else state.typos.unshift(item);editingTypo=-1;["newTypoWrong","newTypoCorrect","newTypoMeaning"].forEach(id=>document.getElementById(id).value="");document.getElementById("saveTypo").textContent="添加错字词";saveState();renderTypos();analyze();showToast("错字词已保存")});
+      els.typoSearch.addEventListener("input",renderTypos);els.typoList.addEventListener("click",e=>{const edit=e.target.closest("[data-edit-typo]");if(edit){editingTypo=Number(edit.dataset.editTypo);const item=state.typos[editingTypo];document.getElementById("newTypoWrong").value=item.wrong;document.getElementById("newTypoCorrect").value=item.correct;document.getElementById("newTypoMeaning").value=item.meaning||"";document.getElementById("saveTypo").textContent="保存修改";return}const del=e.target.closest("[data-delete-typo]");if(del){state.typos.splice(Number(del.dataset.deleteTypo),1);saveState();renderTypos();analyze()}});
+      document.getElementById("saveRule").addEventListener("click",()=>{const prior=editingRule>=0?state.punctuationRules[editingRule]:null,item=cleanRule({id:prior?.id,title:document.getElementById("newRuleTitle").value,pattern:document.getElementById("newRulePattern").value,detail:document.getElementById("newRuleDetail").value,enabled:prior?.enabled!==false},editingRule>=0?"用户修改":"用户添加");if(!item)return showToast("请填写有效的规则名称、表达式和说明");if(editingRule>=0)state.punctuationRules.splice(editingRule,1,item);else state.punctuationRules.unshift(item);editingRule=-1;["newRuleTitle","newRulePattern","newRuleDetail"].forEach(id=>document.getElementById(id).value="");document.getElementById("saveRule").textContent="添加规则";saveState();renderRules();analyze();showToast("标点规则已保存")});
+      els.ruleSearch.addEventListener("input",renderRules);els.ruleList.addEventListener("click",e=>{const toggle=e.target.closest("[data-toggle-rule]");if(toggle){const item=state.punctuationRules[Number(toggle.dataset.toggleRule)];item.enabled=item.enabled===false;saveState();renderRules();analyze();return}const edit=e.target.closest("[data-edit-rule]");if(edit){editingRule=Number(edit.dataset.editRule);const item=state.punctuationRules[editingRule];document.getElementById("newRuleTitle").value=item.title;document.getElementById("newRulePattern").value=item.pattern;document.getElementById("newRuleDetail").value=item.detail;document.getElementById("saveRule").textContent="保存修改";return}const del=e.target.closest("[data-delete-rule]");if(del){state.punctuationRules.splice(Number(del.dataset.deleteRule),1);saveState();renderRules();analyze()}});
       document.querySelectorAll("input[data-color]").forEach(input => input.addEventListener("input", () => { state.colors[input.dataset.color] = input.value; saveState(); applyColors(); analyze(); }));
 
       document.getElementById("exportData").addEventListener("click", exportData);
@@ -1038,17 +1073,19 @@
       document.getElementById("quickImport").addEventListener("click", () => els.fileInput.click());
       els.fileInput.addEventListener("change", () => { if (els.fileInput.files[0]) importFile(els.fileInput.files[0]); });
       document.getElementById("resetAll").addEventListener("click", () => {
-        if (!confirm("确定重置词组、颜色和原文吗？此操作无法撤销。")) return;
-        state = { terms: DEFAULT_TERMS.map(item => ({...item})), idioms: DEFAULT_IDIOMS.map(item => ({...item})), colors: {...DEFAULT_COLORS}, source: "", issueStatus: {} };
-        saveState(); applyColors(); els.source.value = ""; analyze(); renderTerms(); renderIdioms(); showToast("已恢复默认设置");
+        if (!confirm("确定恢复原始词库、标点规则、颜色并清空原文吗？此操作无法撤销。")) return;
+        state = {databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),typos:cloneList(DEFAULT_TYPOS),idioms:cloneList(DEFAULT_IDIOMS),punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{}};
+        saveState(); applyColors(); els.source.value = ""; analyze(); renderTerms(); renderIdioms();renderTypos();renderRules();showToast("已恢复原始数据库");
       });
 
       window.addEventListener("resize", () => { if (issues.length) renderLabels(els.source.value); });
 
       applyColors();
       els.source.value = state.source;
+      saveState();
       analyze();
     })();
   </script>
 </body>
 </html>
+
