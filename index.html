@@ -596,7 +596,7 @@
             <div class="idiom-toolbar"><input class="text-input" id="typoSearch" type="search" placeholder="搜索错误或正确写法"><span class="summary-chip"><b id="typoTotal">0</b> 条</span></div><div class="idiom-list" id="typoList"></div>
           </section>
           <section class="setting-view" data-setting-view="idioms">
-            <h3>易错成语词库</h3><p>查阅或补充需要提醒的成语。正文出现后会用蓝色标记，并显示释义和正确用法。</p>
+            <h3>成语词库</h3><p>内置完整成语字典用于识别四字成语的字序颠倒；易错释义词条会用蓝色标记，并显示释义和正确用法。搜索时可查阅完整字典词目。</p>
             <div class="field-stack">
               <label class="field-label">成语<input class="text-input" id="newIdiomTerm" type="text" maxlength="20" placeholder="例如：差强人意" /></label>
               <label class="field-label">释义<input class="text-input" id="newIdiomMeaning" type="text" maxlength="160" placeholder="说明准确含义或常见误用" /></label>
@@ -611,7 +611,7 @@
               <textarea class="batch-box" id="idiomBatch" placeholder="每条成语包含：成语、释义、举例。多条内容请换行或用空行分隔。"></textarea>
               <button class="wide-btn" id="importIdioms" type="button">识别并导入</button>
             </div>
-            <div class="idiom-toolbar"><input class="text-input" id="idiomSearch" type="search" placeholder="搜索成语或释义" /><span class="summary-chip"><b id="idiomTotal">0</b> 条</span></div>
+            <div class="idiom-toolbar"><input class="text-input" id="idiomSearch" type="search" placeholder="搜索完整成语字典或释义" /><span class="summary-chip"><b id="idiomTotal">0</b> 条</span></div>
             <div class="idiom-list" id="idiomList"></div>
           </section>
           <section class="setting-view" data-setting-view="punctuation">
@@ -642,12 +642,13 @@
   <input id="fileInput" type="file" accept="application/json,.json" hidden />
   <div class="toast" id="toast" role="status"></div>
 
+  <script src="./完整成语词库.js"></script>
   <script>
     (() => {
       "use strict";
 
       const STORAGE_KEY = "novel-proofreader-v1";
-      const DATABASE_VERSION = 4;
+      const DATABASE_VERSION = 5;
       const DEFAULT_TERMS = [
         "非常非常","然后然后","不禁哑然失笑","八九",
         "色情","淫秽","情色","色情描写","露骨描写","成人内容","成人影片","成人视频","黄色影片","黄色图片","黄图","黄文","肉文","床戏","开车文","三级片","无码","裸聊","情色直播","性交易","性服务","卖淫","嫖娼","约炮","一夜情","群交","乱伦","兽交","童妓","幼女色情","未成年性行为",
@@ -704,6 +705,7 @@
       let editingRule = -1;
       let editingTerm = -1;
       let editingIdiom = -1;
+      let editingDictionaryTerm = "";
 
       function cloneList(list){ return list.map(item => ({...item})); }
       function mergeDefaults(saved, defaults, key){ const map=new Map((Array.isArray(saved)?saved:[]).map(item=>[item?.[key],item])); defaults.forEach(item=>{if(!map.has(item[key]))map.set(item[key],{...item})}); return [...map.values()].filter(item=>item?.[key]); }
@@ -716,18 +718,45 @@
             databaseVersion: DATABASE_VERSION,
             terms: upgrading ? mergeDefaults(saved?.terms,DEFAULT_TERMS,"text") : (Array.isArray(saved?.terms)?saved.terms:cloneList(DEFAULT_TERMS)),
             idioms: upgrading ? mergeDefaults(saved?.idioms,DEFAULT_IDIOMS,"term") : (Array.isArray(saved?.idioms)?saved.idioms:cloneList(DEFAULT_IDIOMS)),
+            disabledIdioms: Array.isArray(saved?.disabledIdioms) ? saved.disabledIdioms.filter(item=>typeof item==="string") : [],
             typos: upgrading ? mergeDefaults(saved?.typos,DEFAULT_TYPOS,"wrong") : (Array.isArray(saved?.typos)?saved.typos:cloneList(DEFAULT_TYPOS)),
             punctuationRules: upgrading ? mergeDefaults(saved?.punctuationRules,DEFAULT_PUNCTUATION_RULES,"id") : (Array.isArray(saved?.punctuationRules)?saved.punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES)),
             colors: { ...DEFAULT_COLORS, ...(saved?.colors || {}) },
             source: typeof saved?.source === "string" ? saved.source : "",
             issueStatus: saved?.issueStatus && typeof saved.issueStatus === "object" ? saved.issueStatus : {}
           };
-        } catch (_) { return { databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),idioms:cloneList(DEFAULT_IDIOMS),typos:cloneList(DEFAULT_TYPOS),punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{} }; }
+        } catch (_) { return { databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),idioms:cloneList(DEFAULT_IDIOMS),disabledIdioms:[],typos:cloneList(DEFAULT_TYPOS),punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{} }; }
       }
 
       function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
       function escapeHtml(value) { return value.replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch])); }
       function escapeRegExp(value) { return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+      const FULL_IDIOMS = Array.isArray(window.FULL_IDIOM_WORDS) ? window.FULL_IDIOM_WORDS : [];
+      function activeFullIdioms(){const disabled=new Set(state.disabledIdioms||[]);return FULL_IDIOMS.filter(word=>!disabled.has(word));}
+      function buildIdiomIndexes(){
+        const words=new Set([...activeFullIdioms(),...state.idioms.map(item=>item.term)].filter(Boolean));
+        const orderMap=new Map();
+        words.forEach(word=>{if(Array.from(word).length!==4)return;const key=Array.from(word).sort().join("");if(!orderMap.has(key))orderMap.set(key,[]);orderMap.get(key).push(word)});
+        return {words,orderMap};
+      }
+      function findReorderedIdioms(text){
+        const {words,orderMap}=buildIdiomIndexes(),results=[];
+        const disabled=new Set(state.disabledIdioms||[]),runRe=/[\u3400-\u9fff]{4,}/g;let run;
+        while((run=runRe.exec(text))){
+          const chars=Array.from(run[0]);
+          for(let i=0;i<=chars.length-4;i+=1){
+            const fragment=chars.slice(i,i+4).join("");
+            if(words.has(fragment)||disabled.has(fragment))continue;
+            const candidates=(orderMap.get(chars.slice(i,i+4).sort().join(""))||[]).filter(word=>word!==fragment&&!disabled.has(word));
+            if(!candidates.length)continue;
+            const ranked=candidates.map(word=>({word,diff:Array.from(word).reduce((n,ch,j)=>n+(ch!==chars[i+j]?1:0),0)})).sort((a,b)=>a.diff-b.diff||a.word.localeCompare(b.word,"zh-CN"));
+            const best=ranked[0];if(best.diff<2)continue;
+            results.push({start:run.index+i,end:run.index+i+4,wrong:fragment,correct:best.word});i+=3;
+          }
+        }
+        return results;
+      }
 
       function applyColors() {
         const root = document.documentElement;
@@ -769,6 +798,8 @@
           let match;
           while ((match = re.exec(text))) add(match.index, match.index + item.wrong.length, "idiom", `疑似错写：${item.wrong} → ${item.correct}`, item.meaning, item.example);
         });
+
+        findReorderedIdioms(text).forEach(item=>add(item.start,item.end,"idiom",`疑似成语字序颠倒：${item.wrong} → ${item.correct}`,`这四个字与词典中的“${item.correct}”相同，但排列顺序不同。请结合上下文复核；这是一项通用错序检测，并非只匹配固定错误示例。`,`正确：${item.correct}`));
 
         found.sort((a,b) => a.start - b.start || priority(a.type) - priority(b.type));
         const accepted = [];
@@ -936,10 +967,13 @@
       function renderIdioms() {
         const keyword = (els.idiomSearch?.value || "").trim().toLowerCase();
         const visible = state.idioms.map((item, index) => ({ item, index })).filter(({ item }) => !keyword || `${item.term}${item.meaning}${item.example}`.toLowerCase().includes(keyword));
-        document.getElementById("idiomTotal").textContent = state.idioms.length;
+        const disabled=new Set(state.disabledIdioms||[]),activeCount=FULL_IDIOMS.length-disabled.size;
+        const richTerms=new Set(state.idioms.map(item=>item.term));
+        const dictionaryMatches=keyword?FULL_IDIOMS.filter(word=>!disabled.has(word)&&!richTerms.has(word)&&word.toLowerCase().includes(keyword)).slice(0,100):[];
+        document.getElementById("idiomTotal").textContent = `${activeCount} 字典 / ${state.idioms.length} 释义`;
         els.idiomList.innerHTML = "";
-        if (!visible.length) {
-          els.idiomList.innerHTML = `<div class="hint">${state.idioms.length ? "没有符合搜索条件的成语。" : "成语词库为空，可在上方添加或批量导入。"}</div>`;
+        if (!visible.length && !dictionaryMatches.length) {
+          els.idiomList.innerHTML = `<div class="hint">${keyword ? "完整字典中没有符合搜索条件的成语。" : `已载入 ${activeCount} 条完整字典词目。输入关键词可查阅；下方释义库为空时可在上方添加。`}</div>`;
           return;
         }
         visible.forEach(({ item, index }) => {
@@ -948,6 +982,8 @@
           row.innerHTML = `<div><strong>${escapeHtml(item.term)}</strong><p>${escapeHtml(item.meaning)}</p><em>例：${escapeHtml(item.example.replace(/^例[：:]?\s*/, ""))} · ${escapeHtml(item.source || "用户添加")}</em></div><div class="item-actions"><button class="edit-btn" data-edit-idiom="${index}" type="button">编辑</button><button class="delete-btn" data-delete-idiom="${index}" type="button" title="删除">×</button></div>`;
           els.idiomList.appendChild(row);
         });
+        dictionaryMatches.forEach(word=>{const row=document.createElement("div");row.className="idiom-item";row.innerHTML=`<div><strong>${escapeHtml(word)}</strong><p>完整成语字典词目；参与四字成语错序识别。</p><em>完整字典 · 无释义提醒</em></div><div class="item-actions"><button class="edit-btn" data-edit-dictionary="${escapeHtml(word)}" type="button">编辑</button><button class="delete-btn" data-disable-idiom="${escapeHtml(word)}" type="button" title="从完整字典停用">×</button></div>`;els.idiomList.appendChild(row)});
+        if(keyword&&dictionaryMatches.length===100){const tip=document.createElement("div");tip.className="hint";tip.textContent="结果较多，当前显示前 100 条，请继续输入以缩小范围。";els.idiomList.appendChild(tip)}
       }
 
       function openSettings(view = "terms") {
@@ -962,7 +998,7 @@
       function closeSettings() { els.modal.classList.remove("open"); }
 
       function exportData() {
-        const payload = { app: "字句校对台", version: 3, databaseVersion:DATABASE_VERSION, exportedAt: new Date().toISOString(), terms: state.terms, typos:state.typos, idioms: state.idioms, punctuationRules:state.punctuationRules, colors: state.colors };
+        const payload = { app: "字句校对台", version: 4, databaseVersion:DATABASE_VERSION, exportedAt: new Date().toISOString(), terms: state.terms, typos:state.typos, idioms: state.idioms, disabledIdioms:state.disabledIdioms||[], punctuationRules:state.punctuationRules, colors: state.colors };
         const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
         const link = document.createElement("a");
         link.href = URL.createObjectURL(blob);
@@ -986,6 +1022,7 @@
             Object.keys(DEFAULT_COLORS).forEach(key => { if (/^#[0-9a-f]{6}$/i.test(data.colors?.[key])) cleanColors[key] = data.colors[key]; });
             state.terms = cleanTerms;
             state.idioms = cleanIdioms;
+            state.disabledIdioms=Array.isArray(data.disabledIdioms)?data.disabledIdioms.filter(item=>typeof item==="string"&&FULL_IDIOMS.includes(item)):[];
             state.typos=cleanTypos;state.punctuationRules=cleanRules;state.databaseVersion=DATABASE_VERSION;
             state.colors = cleanColors;
             saveState(); applyColors(); renderTerms(); renderIdioms(); renderTypos();renderRules();analyze();
@@ -1052,8 +1089,9 @@
         if (!item) return showToast("请完整填写成语、释义和举例");
         const existingIndex = editingIdiom>=0?editingIdiom:state.idioms.findIndex(entry => entry.term === item.term);
         if (existingIndex >= 0) state.idioms.splice(existingIndex, 1, {...item,source:"用户修改"}); else state.idioms.unshift(item);
+        if(editingDictionaryTerm&&editingDictionaryTerm!==item.term)state.disabledIdioms=[...new Set([...(state.disabledIdioms||[]),editingDictionaryTerm])];
         ["newIdiomTerm", "newIdiomMeaning", "newIdiomExample"].forEach(id => document.getElementById(id).value = "");
-        editingIdiom=-1;document.getElementById("addIdiom").textContent="添加成语";saveState(); renderIdioms(); analyze(); showToast(existingIndex >= 0 ? "已更新成语词条" : "成语已添加");
+        editingIdiom=-1;editingDictionaryTerm="";document.getElementById("addIdiom").textContent="添加成语";saveState(); renderIdioms(); analyze(); showToast(existingIndex >= 0 ? "已更新成语词条" : "成语已添加");
       });
       document.getElementById("importIdioms").addEventListener("click", () => {
         const imported = parseIdiomBatch(els.idiomBatch.value);
@@ -1069,9 +1107,11 @@
       });
       els.idiomSearch.addEventListener("input", renderIdioms);
       els.idiomList.addEventListener("click", e => {
+        const dictionaryEdit=e.target.closest("[data-edit-dictionary]");if(dictionaryEdit){editingDictionaryTerm=dictionaryEdit.dataset.editDictionary;editingIdiom=-1;document.getElementById("newIdiomTerm").value=editingDictionaryTerm;document.getElementById("newIdiomMeaning").value="";document.getElementById("newIdiomExample").value="";document.getElementById("addIdiom").textContent="保存为释义词条";document.getElementById("newIdiomTerm").focus();showToast("可修改词目并补充释义、举例");return}
+        const disable=e.target.closest("[data-disable-idiom]");if(disable){state.disabledIdioms=[...new Set([...(state.disabledIdioms||[]),disable.dataset.disableIdiom])];saveState();renderIdioms();analyze();showToast(`已停用 ${disable.dataset.disableIdiom}`);return}
         const edit=e.target.closest("[data-edit-idiom]");if(edit){editingIdiom=Number(edit.dataset.editIdiom);const item=state.idioms[editingIdiom];document.getElementById("newIdiomTerm").value=item.term;document.getElementById("newIdiomMeaning").value=item.meaning;document.getElementById("newIdiomExample").value=item.example;document.getElementById("addIdiom").textContent="保存修改";document.getElementById("newIdiomTerm").focus();return}
         const btn = e.target.closest("[data-delete-idiom]"); if (!btn) return;
-        state.idioms.splice(Number(btn.dataset.deleteIdiom), 1); saveState(); renderIdioms(); analyze(); showToast("成语词条已删除");
+        const removed=state.idioms.splice(Number(btn.dataset.deleteIdiom), 1)[0];if(removed&&FULL_IDIOMS.includes(removed.term))state.disabledIdioms=[...new Set([...(state.disabledIdioms||[]),removed.term])];saveState(); renderIdioms(); analyze(); showToast("成语词条已删除");
       });
       document.getElementById("saveTypo").addEventListener("click",()=>{const item=cleanTypo({wrong:document.getElementById("newTypoWrong").value,correct:document.getElementById("newTypoCorrect").value,meaning:document.getElementById("newTypoMeaning").value},editingTypo>=0?"用户修改":"用户添加");if(!item)return showToast("请填写错误写法和正确写法");const duplicate=state.typos.findIndex((x,i)=>i!==editingTypo&&x.wrong===item.wrong);if(duplicate>=0)return showToast("错误写法已存在");if(editingTypo>=0)state.typos.splice(editingTypo,1,item);else state.typos.unshift(item);editingTypo=-1;["newTypoWrong","newTypoCorrect","newTypoMeaning"].forEach(id=>document.getElementById(id).value="");document.getElementById("saveTypo").textContent="添加错字词";saveState();renderTypos();analyze();showToast("错字词已保存")});
       els.typoSearch.addEventListener("input",renderTypos);els.typoList.addEventListener("click",e=>{const edit=e.target.closest("[data-edit-typo]");if(edit){editingTypo=Number(edit.dataset.editTypo);const item=state.typos[editingTypo];document.getElementById("newTypoWrong").value=item.wrong;document.getElementById("newTypoCorrect").value=item.correct;document.getElementById("newTypoMeaning").value=item.meaning||"";document.getElementById("saveTypo").textContent="保存修改";return}const del=e.target.closest("[data-delete-typo]");if(del){state.typos.splice(Number(del.dataset.deleteTypo),1);saveState();renderTypos();analyze()}});
@@ -1086,7 +1126,7 @@
       els.fileInput.addEventListener("change", () => { if (els.fileInput.files[0]) importFile(els.fileInput.files[0]); });
       document.getElementById("resetAll").addEventListener("click", () => {
         if (!confirm("确定恢复原始词库、标点规则、颜色并清空原文吗？此操作无法撤销。")) return;
-        state = {databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),typos:cloneList(DEFAULT_TYPOS),idioms:cloneList(DEFAULT_IDIOMS),punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{}};
+        state = {databaseVersion:DATABASE_VERSION,terms:cloneList(DEFAULT_TERMS),typos:cloneList(DEFAULT_TYPOS),idioms:cloneList(DEFAULT_IDIOMS),disabledIdioms:[],punctuationRules:cloneList(DEFAULT_PUNCTUATION_RULES),colors:{...DEFAULT_COLORS},source:"",issueStatus:{}};
         saveState(); applyColors(); els.source.value = ""; analyze(); renderTerms(); renderIdioms();renderTypos();renderRules();showToast("已恢复原始数据库");
       });
 
