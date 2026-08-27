@@ -407,6 +407,13 @@
     .modal-layer.open .modal { transform: none; }
     .modal-head { display: flex; align-items: center; justify-content: space-between; height: 66px; padding: 0 22px; border-bottom: 1px solid var(--line); }
     .modal-head h2 { margin: 0; font-size: 17px; }
+    .support-dialog { width: min(420px, 100%); }
+    .support-body { display: grid; justify-items: center; gap: 16px; padding: 24px 28px 30px; text-align: center; }
+    .support-qr { display: block; width: min(286px, 72vw); height: auto; border-radius: 12px; }
+    .support-copy { display: grid; gap: 7px; max-width: 330px; }
+    .support-copy p { margin: 0; color: #626b7d; font-size: 13px; line-height: 1.75; text-wrap: pretty; }
+    .support-copy .support-contact { color: #8b93a4; font-size: 12px; }
+    .support-mobile-hint { color: #a0a7b4; font-size: 11px; }
     .modal-body { display: grid; grid-template-columns: 170px minmax(0,1fr); min-height: 470px; }
     .modal-nav { padding: 15px 10px; background: #f7f8fa; border-right: 1px solid var(--line); }
     .nav-btn { display: flex; align-items: center; gap: 9px; width: 100%; height: 40px; padding: 0 12px; border: 0; border-radius: 9px; background: transparent; color: #70798b; cursor: pointer; text-align: left; font-size: 13px; }
@@ -533,6 +540,8 @@
         <button class="settings-item" id="quickExport" type="button"><span>导出数据包</span></button>
         <button class="settings-item" id="quickImport" type="button"><span>导入数据包</span></button>
         <div class="settings-divider"></div>
+        <button class="settings-item" id="supportAuthor" type="button"><span>赞赏作者</span></button>
+        <div class="settings-divider"></div>
         <button class="settings-item danger" id="resetAll" type="button"><span>重置所有数据</span></button>
       </div>
     </header>
@@ -636,6 +645,19 @@
             <div class="hint">兼容旧数据包；新版还包含 <code>typos</code> 和 <code>punctuationRules</code>。所有系统预置词条均可编辑或删除。</div>
           </section>
         </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-layer" id="supportModal" role="dialog" aria-modal="true" aria-labelledby="supportTitle">
+    <div class="modal support-dialog">
+      <div class="modal-head"><h2 id="supportTitle">赞赏作者</h2><button class="icon-btn" id="closeSupport" type="button" aria-label="关闭赞赏窗口">×</button></div>
+      <div class="support-body">
+        <img class="support-qr" src="./赞赏码.jpg" alt="微信赞赏码" />
+        <div class="support-copy">
+          <p>工具完全免费，赞赏出于自愿，不影响任何功能</p>
+          <p class="support-contact">功能反馈联系 QQ：2829426100</p>
+        </div>
+        <span class="support-mobile-hint">手机端可长按图片识别或保存</span>
       </div>
     </div>
   </div>
@@ -1039,6 +1061,9 @@
         renderTypos();renderRules();
       }
       function closeSettings() { els.modal.classList.remove("open"); }
+      const supportModal=document.getElementById("supportModal");
+      function openSupport(){els.popover.classList.remove("open");supportModal.classList.add("open")}
+      function closeSupport(){supportModal.classList.remove("open")}
 
       function exportData() {
         const payload = { app: "字句校对台", version: 4, databaseVersion:DATABASE_VERSION, exportedAt: new Date().toISOString(), terms: state.terms, typos:state.typos, idioms: state.idioms, disabledIdioms:state.disabledIdioms||[], punctuationRules:state.punctuationRules, colors: state.colors };
@@ -1088,8 +1113,11 @@
       document.querySelectorAll("[data-open-settings]").forEach(btn => btn.addEventListener("click", () => openSettings(btn.dataset.openSettings)));
       document.getElementById("closeSettings").addEventListener("click", closeSettings);
       els.modal.addEventListener("click", e => { if (e.target === els.modal) closeSettings(); });
+      document.getElementById("supportAuthor").addEventListener("click",openSupport);
+      document.getElementById("closeSupport").addEventListener("click",closeSupport);
+      supportModal.addEventListener("click",e=>{if(e.target===supportModal)closeSupport()});
       document.querySelectorAll(".nav-btn").forEach(btn => btn.addEventListener("click", () => openSettings(btn.dataset.view)));
-      document.addEventListener("keydown", e => { if (e.key === "Escape") { closeSettings(); els.popover.classList.remove("open"); } });
+      document.addEventListener("keydown", e => { if (e.key === "Escape") { closeSettings();closeSupport(); els.popover.classList.remove("open"); } });
 
       els.source.addEventListener("input", () => {
         els.charCount.textContent = `${els.source.value.replace(/\s/g, "").length} 字`;
